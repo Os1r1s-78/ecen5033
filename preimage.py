@@ -1,22 +1,32 @@
 import hashlib
 import time
-zeroes="000000"
+
+#Change this n for number of hex 0s at start
+n = 6
+filename = "preimage.txt"
+
+# Aakash Kumar and Miles Frain
 identikey="aaku8856-mifr0750"
 
-fh = open("preimage.txt","w")
+fh = open(filename,"w")
 i=0
-first6 = ""
+firstn = ""
+zeroes = ""
 
-print("start:",time.time())
+for j in range(n):
+    zeroes+="0"
 
-while(first6!=zeroes):
+start_time = time.time()
+
+while(firstn!=zeroes):
     tohash = (identikey+"-"+str(i)).encode()
     cur_hash=hashlib.sha256(tohash).hexdigest()
-    first6=cur_hash[0:6]
+    firstn=cur_hash[0:n]
     i+=1
 
 result = str(tohash,'utf-8')+" "+cur_hash
 fh.write(result)
 print(result)
 
-print("end:  ",time.time())
+end_time = time.time()
+print("time taken:",end_time-start_time,"secs")
