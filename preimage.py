@@ -1,8 +1,10 @@
+#!/usr/bin/python3
+
 import hashlib
 import time
 
 #Change this n for number of hex 0s at start
-n = 6
+n = 7
 filename = "preimage.txt"
 
 # Aakash Kumar and Miles Frain
@@ -29,4 +31,4 @@ fh.write(result)
 print(result)
 
 end_time = time.time()
-print("time taken:",end_time-start_time,"secs")
+print("time taken:",int(end_time-start_time),"secs")
