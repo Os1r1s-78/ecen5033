@@ -26,9 +26,25 @@ def ecdsa_verify(msg, pk, (r, s), curve=None, hash_fn=hashlib.sha256):
     z = int(e, 16)
 
     # Compute w = s^-1 mod n
-    w = modinv(s, curve.n) % curve.n
+    w = ecdsa.modinv(s, curve.n) % curve.n
 
-    u1 = z * w % n
+    # Compute 
+    u1 = (z * w) % curve.n
+
+    # Compute 
+    u2 = (r * w) % curve.n
+
+    #Compute
+    G = curve.G()   # group Generator
+    u1G = G.mult(u1)
+    uspk = pk.mult(u2)
+    C = u1G.add(uspk)
+
+    #Check calculated sig with given sig
+    if(r == C.x):
+        return True
+    else:
+        return False
 
 if __name__ == '__main__':
     import ecdsa
@@ -54,8 +70,57 @@ if __name__ == '__main__':
     # *******************************************************
     # TODO: Write your code for pairing messages to signatures here
 
+    ordered_sigs=[]
+
+    for msg in msgs:
+        for sig in sigs:
+            if ecdsa_verify(msg, pk, ecdsa.decode_sig(sig)) == True:
+                ordered_sigs.append(sig)
+                # print msg,sig
 
     # *******************************************************
     # TODO: (Graduate students only, optional for undergrad)
     #       Write your code for extracting the private key
     #       and signing your own message here
+
+    def find_k(msg1, (r1,s1), msg2, (r2,s2), curve=ecdsa.secp256k1, hash_fn=hashlib.sha256):
+        e1 = hash_fn(msg1).hexdigest()
+        z1 = int(e1, 16)
+
+        e2 = hash_fn(msg2).hexdigest()
+        z2 = int(e2, 16)
+
+        return (ecdsa.modinv((s1-s2),curve.n) * (z2-z1)) % curve.n
+
+    def get_private_key(msg,(r,s),k,curve=ecdsa.secp256k1, hash_fn=hashlib.sha256):
+        # pvt_key = r^-1(s*k-z) mod n
+        e = hash_fn(msg).hexdigest()
+        z = int(e, 16)
+        return (ecdsa.modinv(r, curve.n) * (s*k - z )) % curve.n
+    
+    k_list=[]
+
+    for i in range(len(msgs)):
+        for j in range(i+1,len(msgs)):
+            k_list.append(find_k(msgs[i],ecdsa.decode_sig(ordered_sigs[i]),msgs[j],ecdsa.decode_sig(ordered_sigs[j])))
+
+
+    for k in k_list:
+        print k
+
+    for i in range(len(k_list)):
+        for j in range(i+1,len(k_list)):
+            if(k_list[i] == k_list[j] and k_list[i] != 0):
+                print "found",i,j
+                get_private_key(msgs[i],ecdsa.decode_sig(ordered_sigs[i]),k_list[i])
+
+    # skey = get_private_key(msgs[0],ecdsa.decode_sig(ordered_sigs[0]),0L)
+
+    # new_sign = ecdsa.ecdsa_sign(msg[3], skey)
+
+    # print 'Signature: ', ecdsa.encode_sig(new_sign)
+
+    # if ecdsa_verify(msgs[3], pk, new_sign) == True:
+    #     print 'Signature Verified!'
+    # else:
+    #     print "Not verified"

@@ -359,12 +359,12 @@ if __name__=='__main__':
         print 'Signature is Valid!'
     else:
         print 'Error: Signature is Invalid!!!'
-
+    
     # Testing invalid signature...
     if ecdsa_verify(msg + 'x', pk, sig) == False:
         print 'Correctly rejected invalid signature'
     else:
         print 'Error: verify did not reject incorrect signature'
-
+    
 
     sys.exit(0)

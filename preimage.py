@@ -2,15 +2,22 @@
 
 import hashlib
 import time
+import sys
 
-#Change this n for number of hex 0s at start
-n = 7
+#Default Values
+n = 6 #number of leading zeroes 
 filename = "preimage.txt"
+identikey="aaku8856-mifr0750" # Aakash Kumar and Miles Frain
 
-# Aakash Kumar and Miles Frain
-identikey="aaku8856-mifr0750"
+if len(sys.argv) > 2:
+    # Or input from command line as string
+    identikey = sys.argv[1]
+    n = int(sys.argv[2])
 
-fh = open(filename,"w")
+if len(sys.argv) > 1:
+    # Or input from command line as string
+    identikey = sys.argv[1]
+
 i=0
 firstn = ""
 zeroes = ""
@@ -21,12 +28,13 @@ for j in range(n):
 start_time = time.time()
 
 while(firstn!=zeroes):
-    tohash = (identikey+"-"+str(i)).encode()
-    cur_hash=hashlib.sha256(tohash).hexdigest()
-    firstn=cur_hash[0:n]
+    tohash = (identikey+"-"+str(i)).encode() # append number at end of given string
+    cur_hash=hashlib.sha256(tohash).hexdigest() #calculate hash
+    firstn=cur_hash[0:n] #get first n hex chars of the hash
     i+=1
 
 result = str(tohash,'utf-8')+" "+cur_hash
+fh = open(filename,"w")
 fh.write(result)
 print(result)
 

@@ -1,0 +1,2 @@
+#!/bin/bash
+tar czf project1.aaku8856-mifr0750.tar.gz ./preimage.py ./preimage.txt ./verify.py
