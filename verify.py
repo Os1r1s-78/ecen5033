@@ -76,12 +76,15 @@ if __name__ == '__main__':
         for sig in sigs:
             if ecdsa_verify(msg, pk, ecdsa.decode_sig(sig)) == True:
                 ordered_sigs.append(sig)
-                # print msg,sig
+                print msg,sig
 
     # *******************************************************
     # TODO: (Graduate students only, optional for undergrad)
     #       Write your code for extracting the private key
     #       and signing your own message here
+
+    def get_r((r,s)):
+        return r
 
     def find_k(msg1, (r1,s1), msg2, (r2,s2), curve=ecdsa.secp256k1, hash_fn=hashlib.sha256):
         e1 = hash_fn(msg1).hexdigest()
@@ -89,38 +92,47 @@ if __name__ == '__main__':
 
         e2 = hash_fn(msg2).hexdigest()
         z2 = int(e2, 16)
-
-        return (ecdsa.modinv((s1-s2),curve.n) * (z2-z1)) % curve.n
+        num = (z1-z2) % curve.n
+        den = (s1- s2)
+        return (ecdsa.modinv(den,curve.n) * num) % curve.n
 
     def get_private_key(msg,(r,s),k,curve=ecdsa.secp256k1, hash_fn=hashlib.sha256):
         # pvt_key = r^-1(s*k-z) mod n
         e = hash_fn(msg).hexdigest()
-        z = int(e, 16)
-        return (ecdsa.modinv(r, curve.n) * (s*k - z )) % curve.n
+        z = int(e, 16)        
+        return ((ecdsa.modinv(r, curve.n) * (s*k - z )) % curve.n)
     
-    k_list=[]
+    r_list=[]
 
-    for i in range(len(msgs)):
-        for j in range(i+1,len(msgs)):
-            k_list.append(find_k(msgs[i],ecdsa.decode_sig(ordered_sigs[i]),msgs[j],ecdsa.decode_sig(ordered_sigs[j])))
+    for sig in ordered_sigs:
+        r_list.append(get_r(ecdsa.decode_sig(sig)))
 
+    for i in range(len(ordered_sigs)):
+        for j in range(i+1,len(ordered_sigs)):
+            if(r_list[i] == r_list[j]):                
+                #find k from common r
+                k = find_k(msgs[i],ecdsa.decode_sig(ordered_sigs[i]),msgs[j],ecdsa.decode_sig(ordered_sigs[j]))
+                # find private key from reused nonce k
+                pk1 = get_private_key(msgs[i],ecdsa.decode_sig(ordered_sigs[i]),k)
 
-    for k in k_list:
-        print k
+    # sign1 = ecdsa.ecdsa_sign(msgs[4], pk1,ecdsa.secp256k1, hashlib.sha256,k)
+    # print msgs[4],ecdsa.encode_sig(sign1)
 
-    for i in range(len(k_list)):
-        for j in range(i+1,len(k_list)):
-            if(k_list[i] == k_list[j] and k_list[i] != 0):
-                print "found",i,j
-                get_private_key(msgs[i],ecdsa.decode_sig(ordered_sigs[i]),k_list[i])
+    # sign2 = ecdsa.ecdsa_sign(msgs[5], pk1,ecdsa.secp256k1, hashlib.sha256,k)
+    # print msgs[5],ecdsa.encode_sig(sign2)
 
-    # skey = get_private_key(msgs[0],ecdsa.decode_sig(ordered_sigs[0]),0L)
+    new_msg = "Hello from aaku8856 and mifr0750"
 
-    # new_sign = ecdsa.ecdsa_sign(msg[3], skey)
+    new_sign = ecdsa.ecdsa_sign(new_msg, pk1)
 
-    # print 'Signature: ', ecdsa.encode_sig(new_sign)
+    print new_msg, ecdsa.encode_sig(new_sign)
 
-    # if ecdsa_verify(msgs[3], pk, new_sign) == True:
-    #     print 'Signature Verified!'
-    # else:
-    #     print "Not verified"
+    if ecdsa_verify(new_msg, pk, new_sign) == True:
+        print 'Signature Verified!'
+    else:
+        print 'Error: Signature is Invalid!!!'
+
+    if ecdsa_verify(new_msg + 'y', pk, new_sign) == False:
+        print 'Correctly rejected invalid signature'
+    else:
+        print 'Error: verify did not reject incorrect signature'
