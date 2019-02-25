@@ -1,0 +1,2 @@
+#!/bin/bash
+tar czf project2.aaku8856-mifr0750.tar.gz ./rps.sol ./rps.txt ./attack.sol ./attack.txt
