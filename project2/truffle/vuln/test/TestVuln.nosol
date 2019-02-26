@@ -1,0 +1,33 @@
+pragma solidity >=0.4.25 <0.6.0;
+
+import "truffle/Assert.sol";
+import "truffle/DeployedAddresses.sol";
+import "../contracts/Vuln.sol";
+
+contract TestVuln {
+
+    function testInitialBalanceUsingDeployedContract() public {
+        Vuln vuln = Vuln(DeployedAddresses.Vuln());
+
+        Assert.equal(vuln.balances(tx.origin), 0, "Balance should start empty");
+        /*
+           uint deposit_amount = 12;
+           vuln.deposit.value(deposit_amount)();
+
+           Assert.equal(vuln.balances(tx.origin), deposit_amount, "Balance should now have deposit amount");
+         */
+    }
+
+    /*
+    function testDeposit() public {
+        Vuln vuln = Vuln(DeployedAddresses.Vuln());
+
+        Assert.equal(vuln.balances(tx.origin), 0, "Balance should start empty");
+        uint deposit_amount = 12;
+        vuln.deposit.value(deposit_amount)();
+        //vuln.deposit();
+
+        Assert.equal(vuln.balances(tx.origin), deposit_amount, "Balance should now have deposit amount");
+    }
+    */
+}
