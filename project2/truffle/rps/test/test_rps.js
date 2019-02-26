@@ -68,63 +68,59 @@ contract('RPS', (accounts) => {
     await check_choice(Choice.INVALID, "random");
   });
 
-  it('should play correctly', async () => {
+  it('should play correctly without timeout', async () => {
     const rpsInstance = await RPS.deployed();
 
-    // todo random salt
-    const p1_choice = "rock"
-    const p1_salt = "mysalt"
+    async function play_simple_round(p1_choice, p2_choice, wager, expected_p1_gain, expected_p2_gain) {
+      const p1 = accounts[1];
+      const p2 = accounts[2];
 
-    const p1_commitment = await rpsInstance.encode_commitment(p1_choice, p1_salt);
-    console.log(p1_commitment);
+      const p1_initial_balance = await web3.eth.getBalance(p1);
+      const p2_initial_balance = await web3.eth.getBalance(p2);
 
-    const p2_choice = "paper"
-    const p2_salt = "othersalt"
+      // todo random salt
+      const p1_salt = "mysalt"
+      const p1_commitment = await rpsInstance.encode_commitment(p1_choice, p1_salt);
 
-    const p2_commitment = await rpsInstance.encode_commitment(p2_choice, p2_salt);
-    console.log(p2_commitment);
+      const p2_salt = "othersalt"
+      const p2_commitment = await rpsInstance.encode_commitment(p2_choice, p2_salt);
 
-    const p1 = accounts[1];
-    const p2 = accounts[2];
+      await rpsInstance.play(p1_commitment, {value: wager, from: p1});
+      await rpsInstance.play(p2_commitment, {value: wager, from: p2});
 
-    await log_accounts(accounts, 3);
+      await rpsInstance.reveal(p1_choice, p1_salt, {from: p1});
+      await rpsInstance.reveal(p2_choice, p2_salt, {from: p2});
 
-    const wager = 1e18; // 1 eth
-    await rpsInstance.play(p1_commitment, {value: wager, from: p1});
-    await rpsInstance.play(p2_commitment, {value: wager, from: p2});
+      // Any account is welcome to pay the gas fee to withdraw.
+      // So letting 3rd party account withdraw to test if both players lose.
+      await rpsInstance.withdraw({from: accounts[0]});
 
-    const p1_address = await rpsInstance.p1_address();
-    const p2_address = await rpsInstance.p2_address();
+      const p1_final_balance = await web3.eth.getBalance(p1);
+      const p2_final_balance = await web3.eth.getBalance(p2);
 
-    /*
-    // address debugging. problem solved now
-    console.log(p1_address);
-    console.log(p2_address);
-    console.log(p1);
-    console.log(p2);
-    */
+      const p1_gain = p1_final_balance - p1_initial_balance;
+      const p2_gain = p2_final_balance - p2_initial_balance;
 
-    //return;
-    await rpsInstance.reveal(p1_choice, p1_salt, {from: p1});
-    await rpsInstance.reveal(p2_choice, p2_salt, {from: p2});
+      // Round gains to nearest wager multiple to account for unknown gas cost
+      assert.equal(Math.round(p1_gain / wager), Math.round(expected_p1_gain / wager), "unexpected player 1 gains");
+      assert.equal(Math.round(p2_gain / wager), Math.round(expected_p2_gain / wager), "unexpected player 2 gains");
+    }
 
-    await rpsInstance.withdraw({from: p2});
+    const bet = 1e18;
+    await play_simple_round("rock",  "rock",     bet, 0,    0);
+    await play_simple_round("rock",  "paper",    bet, -bet, bet);
+    await play_simple_round("rock",  "scissors", bet, bet,  -bet);
+    await play_simple_round("paper", "r",        bet, bet,  -bet);
+    await play_simple_round("paper", "p",        bet, 0,    0);
+    await play_simple_round("paper", "s",        bet, -bet, bet);
+    await play_simple_round("s",     "r",        bet, -bet, bet);
+    await play_simple_round("s",     "p",        bet, bet,  -bet);
+    await play_simple_round("s",     "s",        bet, 0,    0);
 
-    console.log("------ game played --------")
-    await log_accounts(accounts, 3);
+    // Wagers are lost to first withdrawer if both player's choices are invalid
+    await play_simple_round("foo",   "bar",      bet, -bet, -bet);
 
-    //assert.equal(balance.valueOf(), 0, "first account not empty");
+    // A valid choice always wins against an invalid choice
+    await play_simple_round("rock",  "bar",      bet, bet,  -bet);
   });
-
-  /*
-  // old test for troubleshooting enum array
-  it('array test', async () => {
-    const rpsInstance = await RPS.deployed();
-
-    await rpsInstance.withdraw();
-    const winner = await rpsInstance.winner();
-
-    console.log(winner);
-  });
-  */
 });
