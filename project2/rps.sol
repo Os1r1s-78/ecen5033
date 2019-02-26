@@ -30,6 +30,13 @@ contract RPS {
     */
     function is_prefix(bytes memory pre, uint len, string memory full) private pure returns (bool) {
         bytes memory full_bytes = bytes(full);
+        uint full_bytes_len = full_bytes.length;
+
+        // Restrict prefix to length of full string
+        if (len > full_bytes_len) {
+            len = full_bytes_len;
+        }
+
         for (uint i = 0; i < len; i++) {
             if (pre[i] != full_bytes[i]) {
                 return false;
@@ -39,7 +46,8 @@ contract RPS {
     }
 
     // note that memory type to memory type creates a reference
-    function choice_to_enum(string memory choice_str) private pure returns (Choice) {
+    // Marked public to enable unit testing
+    function choice_to_enum(string memory choice_str) public pure returns (Choice) {
         bytes memory choice = bytes(choice_str);
         uint len = choice.length;
         // in-place conversion to lower-case
@@ -47,11 +55,11 @@ contract RPS {
             if (choice[i] >= bytes1("A") && choice[i] <= bytes1("Z")) {
                 // convert to lower case, 'a' > 'A'
                 /* I miss C :( */
-                //choice[i] -= 'a' - 'A';
-                //choice[i] -= bytes("a") - bytes("A");
-                //choice[i] -= 32;
-                //choice[i] -= bytes1(uint8(32));
-                choice[i] = bytes1(uint8(choice[i]) - 32);
+                //choice[i] += 'a' - 'A';
+                //choice[i] += bytes("a") - bytes("A");
+                //choice[i] += 32;
+                //choice[i] += bytes1(uint8(32));
+                choice[i] = bytes1(uint8(choice[i]) + 32);
             }
         }
         if (is_prefix(choice, len, "rock")) {
