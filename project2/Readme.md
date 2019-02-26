@@ -26,7 +26,9 @@ To test:
 
 ### Part 2 - Vulnerable Contract    
 
-Contract is at [0x7f7c957edb5e57d6fde45229608ce1052e615c2b](https://ropsten.etherscan.io/address/0x7f7c957edb5e57d6fde45229608ce1052e615c2b)      
+Contract is at [0x145410667c8024ea6f43dc5b4c18f788329ed316](https://ropsten.etherscan.io/address/0x145410667c8024ea6f43dc5b4c18f788329ed316)      
+
+Screenshots are from an earlier attempt and not the current contract.
 
 <br>Deposit 0.1 ether from attack contract into the vulnearbale contract          
    ![Deposit From Contract](screenshots/deposit_from_contract.JPG)  
