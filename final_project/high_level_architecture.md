@@ -89,3 +89,15 @@ sources
   - Combining items into products 
 3. Customer interface
   - Deposit & withdrawals
+4. Execute/trigger verification
+5. Trigger detection
+
+## Tabled features
+1. Pricing formula support
+2. Lead time support
+3. Logical bidding
+4. Time-based bidding
+5. Reward for triggering
+6. Multiple vendors for the same part
+7. Shipping fulfillment
+8. Address hashing
