@@ -1,5 +1,5 @@
-const RPS = artifacts.require("RPS");
+const Supply = artifacts.require("SupplyChain");
 
 module.exports = function(deployer, network, accounts) {
-  deployer.deploy(RPS);
+  deployer.deploy(Supply);
 };
