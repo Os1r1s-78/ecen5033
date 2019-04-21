@@ -1,5 +1,7 @@
 const SupplyChain = artifacts.require("SupplyChain");
 const Inventory = artifacts.require("Inventory");
+const StructMapping = artifacts.require("StructMapping");
+const StructAccess = artifacts.require("StructAccess");
 // Eventually want to omit directly including inventory contract.
 
 async function log_accounts(accounts, n)
@@ -126,4 +128,40 @@ contract('Inventory', (accounts) => {
     var numItems = await inventoryInstance.numItems();
     assert.equal(numItems, 2);
   });
+});
+
+contract('StructMapping', (accounts) => {
+
+  it('should pass mapping test', async () => {
+    const mappingInstance = await StructMapping.deployed();
+
+    const mappingOfStruct = await mappingInstance.mappingOfStruct(0);
+    //const mappingOfStruct = await mappingInstance.mappingOfStruct.call(0);
+    console.log(mappingOfStruct); // logs value of c here as hex BN. For example, 20 logged as <BN: 14>
+    console.log(mappingOfStruct.c); // undefined, expected 20
+    console.log(mappingOfStruct[0]); // undefined, expected 20
+  });
+
+  it('should pass struct test', async () => {
+    const mappingInstance = await StructMapping.deployed();
+
+    const singleStruct = await mappingInstance.singleStruct();
+
+    console.log(singleStruct.c);
+  });
+
+});
+
+contract('StructAccess', (accounts) => {
+
+  it('should pass struct access test', async () => {
+    const accessInstance = await StructAccess.deployed();
+
+    //const singleStruct = await accessInstance.singleStruct();
+    const singleStruct = await accessInstance.singleStruct.call();
+
+    console.log(singleStruct.c);
+    assert.equal(singleStruct.c, 5);
+  });
+
 });

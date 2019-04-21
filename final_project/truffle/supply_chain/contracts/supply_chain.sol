@@ -13,6 +13,7 @@ contract Inventory {
     struct Item {
         //id; // ID tracked in higher-level data structure
         uint quantityAvailable;
+        uint dummy; // Amazing that this is required to get code to work
         PriceStruct[] prices; // Probably don't need to specify "stoarge" type. Seems implied.
     }
 
