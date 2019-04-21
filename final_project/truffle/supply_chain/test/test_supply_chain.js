@@ -61,8 +61,6 @@ contract('Inventory', (accounts) => {
         priceWei: 200
     });
 
-    console.log("Hello.....");
-
     var nextId = await inventoryInstance.getNextItemId();
     await inventoryInstance.addItem(30, price_array);
     var prevId = await inventoryInstance.getPreviousItemId();
@@ -73,7 +71,7 @@ contract('Inventory', (accounts) => {
     assert.equal(numItems, 1);
     const item = await inventoryInstance.items(prevId);
 
-    assert.equal(item.quantityAvailable, 30);
+    assert.equal(item.quantityAvailable, 30, "unexpected quantityAvailable");
 
     // Todo - add test to verify price_array was successfully copied over
 

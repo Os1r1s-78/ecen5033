@@ -76,7 +76,7 @@ contract Inventory {
         Automatic "memory" to "storage" copy is not supported
         Must manually copy over priceArray
         */
-        //items[numItems++] = Item({quantityAvailable: quantity, prices: priceArray});
+        //items[numItems++] = Item({quantityAvailable: quantity, dummy: 5, prices: priceArray});
 
         /*
         Attempt 2:
