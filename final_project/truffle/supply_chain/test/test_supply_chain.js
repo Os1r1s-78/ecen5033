@@ -37,8 +37,6 @@ contract('Inventory', (accounts) => {
     const initialItems = await inventoryInstance.numItems();
 
     assert.equal(initialItems, 0, "some items already in inventory");
-    // This works too
-    //assert.equal(initialItems.valueOf(), 0, "some items already in inventory");
   });
 
   it('should be able to pass struct', async () => {
@@ -68,53 +66,16 @@ contract('Inventory', (accounts) => {
     var nextId = await inventoryInstance.getNextItemId();
     await inventoryInstance.addItem(30, price_array);
     var prevId = await inventoryInstance.getPreviousItemId();
-    assert.equal(nextId, nextId);
     assert.equal(nextId, 0);
-    assert.equal(0, prevId);
-    assert.equal(prevId, prevId);
-    /* All of the above pass, but the below fails with this absurd error:
-    AssertionError: expected <BN: 0> to equal <BN: 0>
-    */
-    //assert.equal(nextId, prevId);
-    /* BN comparison also failing
-    https://github.com/EthWorks/bn-chai/issues/2
-    */
-    //expect(nextId).to.eq.BN(prevId);
-    /* Unwrapped workaround
-    TypeError: Cannot read property 'be' of undefined
-    */
-    //(nextId.eq(prevId)).should.be.true;
-
-    /* This seems to be the only correct way
-    */
     assert.isTrue(nextId.eq(prevId));
-
 
     var numItems = await inventoryInstance.numItems();
     assert.equal(numItems, 1);
-
-    /*
-    One of these is supposedly the correct way to do it.
-    https://ethereum.stackexchange.com/questions/34614/return-a-struct-from-a-mapping-in-test-truffle
-    Not sure why structure is not being returned correctly.
-    Might be due to experimental ABI. Could test with smaller standalone project.
-
-    Todo - get correct access to item struct
-
-    Note: I believe the answer is in this top rated comment:
-    https://www.reddit.com/r/ethdev/comments/6us20e/accessing_struct_value_inside_of_map_using_web3/
-
-    */
-    //const item = await inventoryInstance.items(prevId);
-    //const item = await inventoryInstance.items.call(prevId);
-    const item = await inventoryInstance.items(0);
-    //const item = await inventoryInstance.items.call(0);
-    console.log(item); // this logs the item quantity as hex BN
-    console.log(item.quantityAvailable); // undefined
-    console.log(item[0]); // undefined. disagrees with reddit suggestion
+    const item = await inventoryInstance.items(prevId);
 
     assert.equal(item.quantityAvailable, 30);
 
+    // Todo - add test to verify price_array was successfully copied over
 
 
 
@@ -128,40 +89,4 @@ contract('Inventory', (accounts) => {
     var numItems = await inventoryInstance.numItems();
     assert.equal(numItems, 2);
   });
-});
-
-contract('StructMapping', (accounts) => {
-
-  it('should pass mapping test', async () => {
-    const mappingInstance = await StructMapping.deployed();
-
-    const mappingOfStruct = await mappingInstance.mappingOfStruct(0);
-    //const mappingOfStruct = await mappingInstance.mappingOfStruct.call(0);
-    console.log(mappingOfStruct); // logs value of c here as hex BN. For example, 20 logged as <BN: 14>
-    console.log(mappingOfStruct.c); // undefined, expected 20
-    console.log(mappingOfStruct[0]); // undefined, expected 20
-  });
-
-  it('should pass struct test', async () => {
-    const mappingInstance = await StructMapping.deployed();
-
-    const singleStruct = await mappingInstance.singleStruct();
-
-    console.log(singleStruct.c);
-  });
-
-});
-
-contract('StructAccess', (accounts) => {
-
-  it('should pass struct access test', async () => {
-    const accessInstance = await StructAccess.deployed();
-
-    //const singleStruct = await accessInstance.singleStruct();
-    const singleStruct = await accessInstance.singleStruct.call();
-
-    console.log(singleStruct.c);
-    assert.equal(singleStruct.c, 5);
-  });
-
 });

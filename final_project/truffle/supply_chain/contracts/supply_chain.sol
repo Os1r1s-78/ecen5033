@@ -69,26 +69,46 @@ contract Inventory {
     }
 
     function addItem(uint quantity, PriceStruct[] memory priceArray) public returns (uint) {
-        // Automatic "memory" to "storage" copy is not supported
+        /*
+        Attempt 1:
+        One-liner.
+        Compile error.
+        Automatic "memory" to "storage" copy is not supported
+        Must manually copy over priceArray
+        */
         //items[numItems++] = Item({quantityAvailable: quantity, prices: priceArray});
-        // Must manually copy over priceArray
 
-        /* All memory lines compile. Testing todo
+        /*
+        Attempt 2:
+        Create "memory" reference type.
+        All of these lines compile.
+        Testing shows that quantityAvailable is not written to storage.
+        */
+        /*
         Item memory newItem = items[numItems++];
         newItem.quantityAvailable = quantity;
         newItem.prices = priceArray;
         */
 
-        /* Memory to storage array fails, but suspect that storage ref required for data to stick.
+        /*
+        Attempt 3:
+        Create "storage" reference type.
+        Suspect that storage ref required for data to stick.
+        All of these lines except for the last one involving "prices" array compile.
+        */
+        /*
         */
         Item storage newItem = items[numItems++];
         newItem.quantityAvailable = quantity;
-        //items[0].quantityAvailable = quantity; // quick test
         //newItem.prices = priceArray;
+        // Todo - expand "prices" array copy
 
         return numItems - 1; // Item ID
-        // Having trouble retrieving item ID in javascript tests
-        // Workaround is to just use view functions
+        /*
+        Having trouble retrieving item ID in javascript tests.
+        Seems that values are only returned from pure/view functions.
+        Workaround is to just use get<Next/Previous>ItemId() view functions.
+        */
     }
 
     /*
