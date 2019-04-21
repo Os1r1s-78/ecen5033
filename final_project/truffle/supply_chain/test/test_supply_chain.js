@@ -98,6 +98,10 @@ contract('Inventory', (accounts) => {
     Might be due to experimental ABI. Could test with smaller standalone project.
 
     Todo - get correct access to item struct
+
+    Note: I believe the answer is in this top rated comment:
+    https://www.reddit.com/r/ethdev/comments/6us20e/accessing_struct_value_inside_of_map_using_web3/
+
     */
     //const item = await inventoryInstance.items(prevId);
     //const item = await inventoryInstance.items.call(prevId);
@@ -105,6 +109,7 @@ contract('Inventory', (accounts) => {
     //const item = await inventoryInstance.items.call(0);
     console.log(item); // this logs the item quantity as hex BN
     console.log(item.quantityAvailable); // undefined
+    console.log(item[0]); // undefined. disagrees with reddit suggestion
 
     assert.equal(item.quantityAvailable, 30);
 
