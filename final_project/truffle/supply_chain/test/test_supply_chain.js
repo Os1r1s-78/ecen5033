@@ -60,15 +60,10 @@ contract('Inventory', (accounts) => {
         priceWei: 200
     };
 
-    /*
-    Getting this unexpected error:
-    TypeError: Inventory.use_to_test_passing_struct_from_web3 is not a function
-    */
-    await Inventory.use_to_test_passing_struct_from_web3(price_struct);
-
+    await inventoryInstance.use_to_test_passing_struct_from_web3(price_struct);
     const internal_ps = await inventoryInstance.temporary_price_struct_for_testing();
 
-    assert.deepStructEqual(internal_ps.quantity, price_struct.quantity);
-    assert.deepStructEqual(internal_ps.priceWei, price_struct.priceWei);
+    assert.equal(internal_ps.quantity, price_struct.quantity);
+    assert.equal(internal_ps.priceWei, price_struct.priceWei);
   });
 });
