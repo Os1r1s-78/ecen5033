@@ -19,9 +19,7 @@ contract Inventory {
     PriceStruct public temporary_price_struct_for_testing;
 
     function use_to_test_passing_struct_from_web3(PriceStruct memory ps) public {
-        //temporary_price_struct_for_testing = ps;
-        temporary_price_struct_for_testing.quantity = ps.quantity;
-        temporary_price_struct_for_testing.priceWei = ps.priceWei;
+        temporary_price_struct_for_testing = ps;
     }
 
     // Probably want to store items as hash map for lookup by ID
