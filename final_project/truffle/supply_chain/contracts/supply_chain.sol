@@ -24,7 +24,7 @@ contract Inventory {
 
     // Probably want to store items as hash map for lookup by ID
     uint public numItems; // this will act as an ID.
-    mapping (uint => Item) items;
+    mapping (uint => Item) public items;
     address owner;
     // Just single inventory per owner for now
     //id; // ID necessary to allow multiple Inventories per owner
@@ -53,14 +53,37 @@ contract Inventory {
         // Direct copy not supported: https://github.com/ethereum/solidity/issues/3446
         //items[itemId].prices = priceArray;
         // Must use loop instead:
-        // Todo
+        // Delete array first. This just sets all elements to zero
+        delete items[itemId].prices;
+        // Todo, check if deleting reference works instead.
+        //delete prices;
+
+        // Not sure if memory is better than storage. Should just be a reference to storage
+        PriceStruct[] storage prices = items[itemId].prices; // reference
+
+        for (uint i = 0; i < prices.length; i++)
+        {
+            // Todo, focus on addItem first
+        }
     }
 
     function addItem(uint quantity, PriceStruct[] memory priceArray) public returns (uint) {
         // Automatic "memory" to "storage" copy is not supported
         //items[numItems++] = Item({quantityAvailable: quantity, prices: priceArray});
         // Must manually copy over priceArray
-        // Todo
+
+        /* All memory lines compile. Testing todo
+        Item memory newItem = items[numItems++];
+        newItem.quantityAvailable = quantity;
+        newItem.prices = priceArray;
+        */
+
+        /* Memory to storage array fails, but suspect that storage ref required for data to stick.
+        */
+        Item storage newItem = items[numItems++];
+        newItem.quantityAvailable = quantity;
+        //items[0].quantityAvailable = quantity; // quick test
+        //newItem.prices = priceArray;
 
         return numItems - 1; // Item ID
         // Having trouble retrieving item ID in javascript tests

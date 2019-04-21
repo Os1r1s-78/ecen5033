@@ -39,20 +39,6 @@ contract('Inventory', (accounts) => {
     //assert.equal(initialItems.valueOf(), 0, "some items already in inventory");
   });
 
-  it('should be able to add inventory item', async () => {
-    const inventoryInstance = await Inventory.deployed();
-
-    /*
-    See this example for how to add pass struct parameter via web3.
-    https://github.com/trufflesuite/truffle/pull/1409/commits/e82707817cc2697a349633cc23d29118a564ed0b#diff-17925857bd735731a1948f43a126acb2
-
-    I suspect this can also work with array of struct, but should probably start with simple struct example first.
-    See next function for this.
-
-    */
-    //assert.equal(todo, todo, "failed to add inventory item");
-  });
-
   it('should be able to pass struct', async () => {
     const inventoryInstance = await Inventory.deployed();
     const price_struct = {
@@ -65,5 +51,74 @@ contract('Inventory', (accounts) => {
 
     assert.equal(internal_ps.quantity, price_struct.quantity);
     assert.equal(internal_ps.priceWei, price_struct.priceWei);
+  });
+
+  it('should be able to add inventory item', async () => {
+    const inventoryInstance = await Inventory.deployed();
+    var price_array = [];
+    price_array.push({
+        quantity: 100,
+        priceWei: 200
+    });
+
+    console.log("Hello.....");
+
+    var nextId = await inventoryInstance.getNextItemId();
+    await inventoryInstance.addItem(30, price_array);
+    var prevId = await inventoryInstance.getPreviousItemId();
+    assert.equal(nextId, nextId);
+    assert.equal(nextId, 0);
+    assert.equal(0, prevId);
+    assert.equal(prevId, prevId);
+    /* All of the above pass, but the below fails with this absurd error:
+    AssertionError: expected <BN: 0> to equal <BN: 0>
+    */
+    //assert.equal(nextId, prevId);
+    /* BN comparison also failing
+    https://github.com/EthWorks/bn-chai/issues/2
+    */
+    //expect(nextId).to.eq.BN(prevId);
+    /* Unwrapped workaround
+    TypeError: Cannot read property 'be' of undefined
+    */
+    //(nextId.eq(prevId)).should.be.true;
+
+    /* This seems to be the only correct way
+    */
+    assert.isTrue(nextId.eq(prevId));
+
+
+    var numItems = await inventoryInstance.numItems();
+    assert.equal(numItems, 1);
+
+    /*
+    One of these is supposedly the correct way to do it.
+    https://ethereum.stackexchange.com/questions/34614/return-a-struct-from-a-mapping-in-test-truffle
+    Not sure why structure is not being returned correctly.
+    Might be due to experimental ABI. Could test with smaller standalone project.
+
+    Todo - get correct access to item struct
+    */
+    //const item = await inventoryInstance.items(prevId);
+    //const item = await inventoryInstance.items.call(prevId);
+    const item = await inventoryInstance.items(0);
+    //const item = await inventoryInstance.items.call(0);
+    console.log(item); // this logs the item quantity as hex BN
+    console.log(item.quantityAvailable); // undefined
+
+    assert.equal(item.quantityAvailable, 30);
+
+
+
+
+    // Test adding another item
+    nextId = await inventoryInstance.getNextItemId();
+    await inventoryInstance.addItem(40, price_array);
+    prevId = await inventoryInstance.getPreviousItemId();
+    assert.equal(nextId, 1);
+    assert.isTrue(nextId.eq(prevId));
+
+    var numItems = await inventoryInstance.numItems();
+    assert.equal(numItems, 2);
   });
 });
