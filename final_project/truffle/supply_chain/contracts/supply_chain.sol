@@ -18,10 +18,12 @@ contract Inventory {
     }
 
     PriceStruct public temporary_price_struct_for_testing;
+    PriceStruct[] public price_test;
 
     function use_to_test_passing_struct_from_web3(PriceStruct memory ps) public {
         temporary_price_struct_for_testing = ps;
     }
+
 
     // Probably want to store items as hash map for lookup by ID
     uint public numItems; // this will act as an ID.
@@ -68,6 +70,12 @@ contract Inventory {
         }
     }
 
+
+    function get_priceStruct(uint itemnum, uint arr_ind) public view returns (PriceStruct memory){
+
+        return items[itemnum].prices[arr_ind];
+    }
+
     function addItem(uint quantity, PriceStruct[] memory priceArray) public returns (uint) {
         /*
         Attempt 1:
@@ -76,8 +84,13 @@ contract Inventory {
         Automatic "memory" to "storage" copy is not supported
         Must manually copy over priceArray
         */
-        //items[numItems++] = Item({quantityAvailable: quantity, dummy: 5, prices: priceArray});
 
+        items[numItems].quantityAvailable = quantity;//Item({quantityAvailable: quantity, dummy: 5, prices: priceArray});
+
+        for (uint i = 0; i < priceArray.length; i++) {
+            items[numItems].prices.push(priceArray[i]);
+        }
+        numItems++;
         /*
         Attempt 2:
         Create "memory" reference type.
@@ -98,12 +111,16 @@ contract Inventory {
         */
         /*
         */
-        Item storage newItem = items[numItems++];
-        newItem.quantityAvailable = quantity;
-        //newItem.prices = priceArray;
-        // Todo - expand "prices" array copy
+        // Item storage newItem = items[numItems++];
+        // newItem.quantityAvailable = quantity;
+        // // newItem.prices = priceArray;
+        // for (uint i = 0; i < priceArray.length; i++)
+        // {
+        //     newItem.prices.push(priceArray[i]);// Todo, focus on addItem first
+        // }
+        // // Todo - expand "prices" array copy
 
-        return numItems - 1; // Item ID
+        // return numItems - 1; // Item ID
         /*
         Having trouble retrieving item ID in javascript tests.
         Seems that values are only returned from pure/view functions.
@@ -124,6 +141,7 @@ contract Inventory {
         return numItems - 1; // underflow if numItems = 0;
     }
 }
+
 
 contract SupplyChain {
 
