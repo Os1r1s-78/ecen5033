@@ -133,6 +133,7 @@ contract Inventory {
     Can just request with view function.
     Seem to have issues with retrieving values from non-pure/view functions,
     so can't get this value from addItem call.
+    These will work as long as long as addItem is called in the same transaction.
     */
     function getNextItemId() public view returns (uint) {
         return numItems;
@@ -142,6 +143,68 @@ contract Inventory {
     }
 }
 
+contract CustomerBids {
+
+    struct Customer {
+        uint fundsWei;
+        uint dummy;
+    }
+
+    struct Bid {
+        address customerAddress;
+        uint productId;
+        uint bidWei;
+        uint quantity;
+    }
+
+    mapping (address => Customer) public customers;
+    mapping (uint => Bid) public bids;
+
+    uint public numBids;
+
+    function placeBid(uint productId, uint bidWei, uint quantity) public {
+        bids[numBids++] = Bid({
+            customerAddress: msg.sender,
+            productId: productId,
+            bidWei: bidWei,
+            quantity: quantity
+        });
+
+        /* Non-pure/view functions only return transaction details, not values.
+        So cannot return bidId to customer here.
+        Must use another view function to get bidId.
+        */
+    }
+
+    function removeBid(uint bidId) public {
+        Bid storage bid = bids[bidId];
+        require (bid.customerAddress == msg.sender);
+        //delete bid; // cannot apply delete to storage pointer
+        delete bids[bidId];
+
+        // This requires more testing
+    }
+
+    // These will work as long as long as placeBid is called in the same transaction.
+    function getNextBidId() public view returns (uint) {
+        return numBids;
+    }
+    function getPreviousBidId() public view returns (uint) {
+        return numBids - 1; // underflow if numBids = 0;
+    }
+
+    function depositFunds() public payable {
+        // Increment funds
+        customers[msg.sender].fundsWei += msg.value;
+    }
+
+    function withdrawFunds() public {
+        // Transfer all funds
+        msg.sender.transfer(customers[msg.sender].fundsWei);
+        // Reset balance to zero
+        customers[msg.sender].fundsWei = 0;
+    }
+}
 
 contract SupplyChain {
 
