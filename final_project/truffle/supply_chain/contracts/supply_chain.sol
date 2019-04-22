@@ -129,7 +129,7 @@ contract SupplyChain {
 
     uint numInventories; // this will act as an ID.
     mapping (uint => Inventory) inentories;
-    
+
     // Dummy function for sanity testing of truffle
     function alwaysPasses() public pure returns (bool) {
         return true;
@@ -151,7 +151,7 @@ contract ProductRegistry {
         // manufacturer's inventory.
         // If part is a product, part_ID should be the product_ID
         uint part_ID;
-        uint quantity; 
+        uint quantity;
     }
 
     /*

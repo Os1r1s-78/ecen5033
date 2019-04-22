@@ -127,6 +127,6 @@ contract('ProductRegistry', (accounts) => {
     assert.equal(product_part_1.manufacturer_ID, parts_array[0].manufacturer_ID, "unexpected manufacturer_ID for product's first part");
     assert.equal(product_part_1.part_ID, parts_array[0].part_ID, "unexpected part_ID of product's first part");
     assert.equal(product_part_1.quantity, parts_array[0].quantity, "unexpected quantity of product's first part");
-    
+
   });
 });
