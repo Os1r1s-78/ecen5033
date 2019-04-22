@@ -27,6 +27,52 @@ contract('SupplyChain', (accounts) => {
       assert.equal(result.valueOf(), true, "does not always pass"));
   });
 
+  it('should pass real-ish world example', async () => {
+    const supplyInstance = await SupplyChain.deployed();
+
+    const kbAccessoriesCo = accounts[1];
+    // keycaps, switches - item
+    const miscElectronicsCo = accounts[2];
+    // diodes - item
+    const pcbFabCo = accounts[3];
+    // pcb - item
+    const plasticsCo = accounts[4];
+    // enclosure - item
+    const shippingCo = accounts[5];
+    // fulfillment - item
+
+    const designer = accounts[6];
+    // keyboard - product (all of the above except for fulfillment)
+
+    // customers bid on:
+    // shipped keyboard - product (keyboard + fulfillment)
+
+    const c1 = accounts[7];
+    const c2 = accounts[8];
+    const c3 = accounts[9];
+
+    // Supplier phase
+    // todo supplyInstance.addItem(item_info, {from: kbAccessoriesCo});
+    // todo supplyInstance.getPreviousItemId();
+    // May eventually need helper contract for managing supplier product IDs
+    // Finish building-up inventory
+
+    // Designer phase
+    // todo supplyInstance.addPart(item_info, {from: kbAccessoriesCo});
+    // Links items and products together to form a "keyboard" product
+
+    // Bidding phase
+    // Customers bid on their own unique "shipped keyboards" product
+    // Fulfillment will add their hashed addresses during this step
+
+    // Execution phase
+    // External logic to scan for triggering condition
+    // Manually monitoring for triggering condition at first.
+
+    // Function to handle triggering and recursive funds transfer
+  });
+
+
 });
 
 contract('Inventory', (accounts) => {

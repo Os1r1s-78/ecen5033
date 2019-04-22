@@ -14,6 +14,7 @@ contract Inventory {
         //id; // ID tracked in higher-level data structure
         uint quantityAvailable;
         uint dummy; // Amazing that this is required to get code to work
+        bytes32 hashedDescription;
         PriceStruct[] prices; // Probably don't need to specify "stoarge" type. Seems implied.
     }
 
@@ -28,7 +29,8 @@ contract Inventory {
     // Probably want to store items as hash map for lookup by ID
     uint public numItems; // this will act as an ID.
     mapping (uint => Item) public items;
-    address owner;
+    // No need for owner here, since owner address is key to parent mapping
+    //address owner;
     // Just single inventory per owner for now
     //id; // ID necessary to allow multiple Inventories per owner
     // ID tracked in higher level data structure
@@ -208,8 +210,9 @@ contract CustomerBids {
 
 contract SupplyChain {
 
-    uint numInventories; // this will act as an ID.
-    mapping (uint => Inventory) inentories;
+    //uint numInventories; // this will act as an ID.
+    // Inventories tied to their owner address
+    mapping (address => Inventory) inventories;
 
     // Dummy function for sanity testing of truffle
     function alwaysPasses() public pure returns (bool) {
@@ -228,6 +231,7 @@ contract ProductRegistry {
         PART_TYPE part_type;
         uint manufacturer_ID; // Consider making this an address
 
+        //bytes32 hashedDescription;
         // If part is an item, part_ID should be the item_id in the
         // manufacturer's inventory.
         // If part is a product, part_ID should be the product_ID
