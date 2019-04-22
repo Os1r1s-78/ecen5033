@@ -168,10 +168,10 @@ contract('ProductRegistry', (accounts) => {
 
     var parts_array = [];
     parts_array.push({
-      part_type: 0,
-      manufacturer_ID: 0,
-      part_ID: 0,
-      quantity: 1
+      part_type: 1,
+      manufacturer_ID: 2,
+      part_ID: 3,
+      quantity: 4
     });
 
     var nextProductId = await productRegistryInstance.getNextProductId();
