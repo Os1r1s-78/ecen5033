@@ -70,26 +70,40 @@ contract('Inventory', (accounts) => {
 
     var numItems = await inventoryInstance.numItems();
     assert.equal(numItems, 1);
-    const item = await inventoryInstance.items(prevId);
+    var item = await inventoryInstance.items(prevId);
 
     assert.equal(item.quantityAvailable, 30, "unexpected quantityAvailable");
+    var price_list = await inventoryInstance.get_priceStruct(0,0);
 
-    // Todo - add test to verify price_array was successfully copied over
+    assert.equal(price_list.quantity, 100 , "unexpected price list quantity");
+    assert.equal(price_list.priceWei, 200 , "unexpected price list price");
+
+    // second item being added to the inventory
+    price_array.push({
+      quantity: 456,
+      priceWei: 678
+    });
 
 
-
-    // Test adding another item
     nextId = await inventoryInstance.getNextItemId();
     await inventoryInstance.addItem(40, price_array);
+    numItems = await inventoryInstance.numItems();
+    assert.equal(numItems, 2);
     prevId = await inventoryInstance.getPreviousItemId();
     assert.equal(nextId, 1);
     assert.isTrue(nextId.eq(prevId));
 
-    var numItems = await inventoryInstance.numItems();
-    assert.equal(numItems, 2);
+    item = await inventoryInstance.items(prevId);
+    assert.equal(item.quantityAvailable, 40, "unexpected quantityAvailable");
+
+    price_list = await inventoryInstance.get_priceStruct(prevId,1);
+    assert.equal(price_list.quantity, 456 , "unexpected price list quantity");
+    assert.equal(price_list.priceWei, 678 , "unexpected price list price");
+
+    nextId = await inventoryInstance.getNextItemId();
+    assert.equal(nextId, 2);
   });
 });
-
 contract('ProductRegistry', (accounts) => {
   it('should pass ProductRegistry trivial test', async () => {
     assert.equal(0, 0, "0 == 0");
