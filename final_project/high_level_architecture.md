@@ -26,7 +26,7 @@
       - Part
         - Manufacturer_ID
         - Part_ID
-    - Quantity
+        - Quantity
   - Designer_ID/Address
 ### Methods
 1. Add product
