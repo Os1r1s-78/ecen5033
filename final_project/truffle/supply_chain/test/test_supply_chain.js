@@ -4,6 +4,7 @@ const ProductRegistry = artifacts.require("ProductRegistry");
 const CustomerBids = artifacts.require("CustomerBids");
 const StructMapping = artifacts.require("StructMapping");
 const StructAccess = artifacts.require("StructAccess");
+const crypto = require("crypto");
 // Eventually want to omit directly including inventory contract.
 
 async function log_accounts(accounts, n)
@@ -53,6 +54,27 @@ contract('SupplyChain', (accounts) => {
 
     // Supplier phase
     // todo supplyInstance.addItem(item_info, {from: kbAccessoriesCo});
+    const keycapDesc = "Generic keyboard keycaps";
+    const keycapHashedDesc = crypto.createHash('sha256').update(keycapDesc).digest('hex');
+    const keycapQuantity = 50000;
+    var keycapConstArray = [];
+    keycapConstArray.push({
+      quantity: 1,
+      priceWei: 500
+    });
+    keycapConstArray.push({
+      quantity: 100,
+      priceWei: 400
+    });
+    keycapConstArray.push({
+      quantity: 10000,
+      priceWei: 250
+    });
+    supplyInstance.inventories[kbAccessoriesCo].addItem(keycapQuantity,
+                                                        keycapHashedDesc,
+                                                        keycapPriceArray)
+    const keycapId = supplyInstance.inventories[kbAccessoriesCo].getPreviousItemId();
+    assert.equal(keycapId, 0, "unexpected keycapId");
     // todo supplyInstance.getPreviousItemId();
     // May eventually need helper contract for managing supplier product IDs
     // Finish building-up inventory
@@ -104,13 +126,14 @@ contract('Inventory', (accounts) => {
   it('should be able to add inventory item', async () => {
     const inventoryInstance = await Inventory.deployed();
     var price_array = [];
+    const descHash = crypto.createHash('sha256').update('sample description').digest();
     price_array.push({
         quantity: 100,
         priceWei: 200
     });
 
     var nextId = await inventoryInstance.getNextItemId();
-    await inventoryInstance.addItem(30, price_array);
+    await inventoryInstance.addItem(30, descHash, price_array);
     var prevId = await inventoryInstance.getPreviousItemId();
     assert.equal(nextId, 0);
     assert.isTrue(nextId.eq(prevId));
@@ -126,6 +149,7 @@ contract('Inventory', (accounts) => {
     assert.equal(price_list.priceWei, 200 , "unexpected price list price");
 
     // second item being added to the inventory
+    const descHash2 = crypto.createHash('sha256').update('second sample description').digest();
     price_array.push({
       quantity: 456,
       priceWei: 678
@@ -133,7 +157,7 @@ contract('Inventory', (accounts) => {
 
 
     nextId = await inventoryInstance.getNextItemId();
-    await inventoryInstance.addItem(40, price_array);
+    await inventoryInstance.addItem(40, descHash2, price_array);
     numItems = await inventoryInstance.numItems();
     assert.equal(numItems, 2);
     prevId = await inventoryInstance.getPreviousItemId();
@@ -169,7 +193,7 @@ contract('ProductRegistry', (accounts) => {
     var parts_array = [];
     parts_array.push({
       part_type: 1,
-      manufacturer_ID: 2,
+      manufacturer_ID: '0x00a329c0648769A73afAc7F9381E08FB43dBEA72',
       part_ID: 3,
       quantity: 4
     });

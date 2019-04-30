@@ -15,7 +15,7 @@ contract Inventory {
         uint quantityAvailable;
         uint dummy; // Amazing that this is required to get code to work
         bytes32 hashedDescription;
-        PriceStruct[] prices; // Probably don't need to specify "stoarge" type. Seems implied.
+        PriceStruct[] prices; // Probably don't need to specify "storage" type. Seems implied.
     }
 
     /**
@@ -86,9 +86,10 @@ contract Inventory {
         return items[itemnum].prices[arr_ind];
     }
 
-    function addItem(uint quantity, PriceStruct[] memory priceArray) public returns (uint) {
+    function addItem(uint quantity, bytes32 description, PriceStruct[] memory priceArray) public returns (uint) {
 
         items[numItems].quantityAvailable = quantity;
+        items[numItems].hashedDescription = description;
 
         for (uint i = 0; i < priceArray.length; i++) {
             items[numItems].prices.push(priceArray[i]);
@@ -196,7 +197,9 @@ contract ProductRegistry {
 
     struct Part {
         PART_TYPE part_type;
-        uint manufacturer_ID; // Consider making this an address
+        // If part is item, then manufacturer_ID is supplier address
+        // If part is product, then manufacturer_ID is designer address
+        address manufacturer_ID;
 
         //bytes32 hashedDescription;
         // If part is an item, part_ID should be the item_id in the
