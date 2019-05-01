@@ -6,6 +6,7 @@ pragma experimental ABIEncoderV2;
 contract Inventory {
     // How to let other contracts know about these structs?
     // Do they need to be put in another shared contract?
+    //   A: Should be able to use them with `Inventory.PriceStruct`
     struct PriceStruct {
         uint quantity;
         uint priceWei;
@@ -180,12 +181,32 @@ contract SupplyChain {
 
     //uint numInventories; // this will act as an ID.
     // Inventories tied to their owner address
-    mapping (address => Inventory) inventories;
+    // Notes on working with mapping of contracts:
+    // https://ethereum.stackexchange.com/questions/32354/mapping-to-contract
+    mapping (address => Inventory) public inventories;
+    mapping (address => bool) public inventory_available;
 
     // Dummy function for sanity testing of truffle
     function alwaysPasses() public pure returns (bool) {
         return true;
     }
+
+    function addItem(uint quantity, bytes32 description, Inventory.PriceStruct[] memory priceArray) public {
+        if (!inventory_available[msg.sender]) {
+            inventory_available[msg.sender] = true;
+            inventories[msg.sender] = new Inventory();
+        }
+        inventories[msg.sender].addItem(quantity, description, priceArray);
+    }
+
+    function getPreviousItemId() public view returns (uint) {
+        if (inventory_available[msg.sender]) {
+            return inventories[msg.sender].getPreviousItemId();
+        } else {
+            return ~uint(0); // largest uint
+        }
+    }
+
 }
 
 contract ProductRegistry {

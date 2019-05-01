@@ -54,28 +54,63 @@ contract('SupplyChain', (accounts) => {
 
     // Supplier phase
     // todo supplyInstance.addItem(item_info, {from: kbAccessoriesCo});
+
+    // add keycaps
     const keycapDesc = "Generic keyboard keycaps";
-    const keycapHashedDesc = crypto.createHash('sha256').update(keycapDesc).digest('hex');
+    const keycapHashedDesc = crypto.createHash('sha256').update(keycapDesc).digest();
     const keycapQuantity = 50000;
-    var keycapConstArray = [];
-    keycapConstArray.push({
+    var keycapPriceArray = [];
+    keycapPriceArray.push({
+      quantity: 1,
+      priceWei: 10
+    });
+    keycapPriceArray.push({
+      quantity: 100,
+      priceWei: 8
+    });
+    keycapPriceArray.push({
+      quantity: 10000,
+      priceWei: 5
+    });
+
+    await supplyInstance.addItem(
+      keycapQuantity,
+      keycapHashedDesc,
+      keycapPriceArray,
+      { from: kbAccessoriesCo }
+    );
+
+    const keycapId = await supplyInstance.getPreviousItemId({from: kbAccessoriesCo});
+    assert.equal(keycapId, 0, "unexpected keycapId");
+
+    // add switches
+    const switchDesc = "Premium mechanical keyboard switches";
+    const switchHashedDesc = crypto.createHash('sha256').update(switchDesc).digest();
+    const switchQuantity = 10000;
+    var switchPriceArray = [];
+    switchPriceArray.push({
       quantity: 1,
       priceWei: 500
     });
-    keycapConstArray.push({
+    switchPriceArray.push({
       quantity: 100,
       priceWei: 400
     });
-    keycapConstArray.push({
+    switchPriceArray.push({
       quantity: 10000,
       priceWei: 250
     });
-    supplyInstance.inventories[kbAccessoriesCo].addItem(keycapQuantity,
-                                                        keycapHashedDesc,
-                                                        keycapPriceArray)
-    const keycapId = supplyInstance.inventories[kbAccessoriesCo].getPreviousItemId();
-    assert.equal(keycapId, 0, "unexpected keycapId");
-    // todo supplyInstance.getPreviousItemId();
+
+    await supplyInstance.addItem(
+      switchQuantity,
+      switchHashedDesc,
+      switchPriceArray,
+      { from: kbAccessoriesCo }
+    );
+
+    const switchId = await supplyInstance.getPreviousItemId({from: kbAccessoriesCo});
+    assert.equal(switchId, 1, "unexpected switchId");
+
     // May eventually need helper contract for managing supplier product IDs
     // Finish building-up inventory
 
