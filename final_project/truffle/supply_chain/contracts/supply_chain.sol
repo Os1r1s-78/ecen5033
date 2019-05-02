@@ -230,6 +230,7 @@ contract SupplyChain {
         bool errorFlag = false;
         uint productNum = 0;
 
+        /* Does not compile
         for(uint i=0;i<bidsContract.numBids();i++) {
             if(bidsContract.bids[i].productId = productId ) {
                 errorFlag = true;
@@ -241,6 +242,7 @@ contract SupplyChain {
                 productNum++;
             }
         }
+        */
 
         /**
         Needs to be checked, whole execute should be reverted when
