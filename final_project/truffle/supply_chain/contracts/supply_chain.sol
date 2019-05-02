@@ -207,6 +207,53 @@ contract SupplyChain {
         }
     }
 
+    /**
+    bidsContract parameter may not be required here
+    execution will happen for a particaular product
+    by this function being called by the executioner
+
+    run through all bids for this product
+    check if the customer has funds in their account for the
+    amount they bid
+    if yes pay to contract
+    remove bid
+    then run through the design contract of the product
+    and pay all vendors
+     */
+
+    function execute(address bidsAddress, uint productId)  public {
+        CustomerBids bidsContract = CustomerBids(bidsAddress);
+        uint bids_num = bidsContract.getNextBidId();
+        // how is above different from
+        //bidsAddress.call(abi.encodeWithSignature("getNextBidId()"));
+
+        bool errorFlag = false;
+        uint productNum = 0;
+
+        for(uint i=0;i<bidsContract.numBids();i++) {
+            if(bidsContract.bids[i].productId = productId ) {
+                errorFlag = true;
+                require(bidsContract.bids[i].customerAddress.fundsWei >
+                        bidsContract.bids[i].bidWei,"Not enough funds");
+                bidsContract.bids[i].customerAddress.balance -= bidsContract.bids[i].bidWei;
+                bidsContract.removeBid(i);
+                errorFlag = false;
+                productNum++;
+            }
+        }
+
+        /**
+        Needs to be checked, whole execute should be reverted when
+        customer with bid does not have enough funds for the item
+         */
+        if(errorFlag)
+            revert();
+
+        /**
+        Each vendor needs to be paid productNum * itemPrice
+         */
+    }
+
 }
 
 contract ProductRegistry {
