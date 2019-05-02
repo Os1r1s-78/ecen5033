@@ -177,6 +177,62 @@ contract CustomerBids {
     }
 }
 
+contract ProductRegistry {
+    // Parts can be items or products
+    enum PART_TYPE {
+        ITEM,
+        PRODUCT
+    }
+
+    struct Part {
+        PART_TYPE part_type;
+        // If part is item, then manufacturer_ID is supplier address
+        // If part is product, then manufacturer_ID is designer address
+        address manufacturer_ID;
+
+        //bytes32 hashedDescription;
+        // If part is an item, part_ID should be the item_id in the
+        // manufacturer's inventory.
+        // If part is a product, part_ID should be the product_ID
+        uint part_ID;
+        uint quantity;
+    }
+
+    /*
+    Because productId is tracked at a higher level, a full struct is unecessary
+    to store just the partsArray
+
+    struct Product {
+        uint x;
+        Part[] partsArray;
+    }
+    */
+
+    uint public numProducts; // acts as ID
+    mapping (uint => Part[]) public products;
+
+    function addProduct(Part[] memory _partsArray) public returns (uint) {
+        Part[] storage newProduct = products[numProducts++];
+
+        // Copy _partsArray into newProduct
+        for (uint i = 0; i < _partsArray.length; i++) {
+            newProduct.push(_partsArray[i]);
+        }
+        // Todo - remove returning of values from all non-(view/pure) functions
+        return numProducts - 1; // return Product ID
+    }
+
+    function removeProduct(uint productId) public {
+        delete products[productId];
+    }
+    function getNextProductId() public view returns (uint) {
+        return numProducts;
+    }
+    function getPreviousProductId() public view returns (uint) {
+        return numProducts - 1; // underflow if numProducts = 0;
+    }
+}
+
 contract SupplyChain {
 
     /*
@@ -203,8 +259,6 @@ contract SupplyChain {
         }
         inventories[msg.sender].addItem(quantity, description, priceArray);
     }
-
-    // Todo remaining item functions
 
     function getNextItemId() public view returns (uint) {
         if (inventoryAvailable[msg.sender]) {
@@ -303,60 +357,4 @@ contract SupplyChain {
          */
     }
 
-}
-
-contract ProductRegistry {
-    // Parts can be items or products
-    enum PART_TYPE {
-        ITEM,
-        PRODUCT
-    }
-
-    struct Part {
-        PART_TYPE part_type;
-        // If part is item, then manufacturer_ID is supplier address
-        // If part is product, then manufacturer_ID is designer address
-        address manufacturer_ID;
-
-        //bytes32 hashedDescription;
-        // If part is an item, part_ID should be the item_id in the
-        // manufacturer's inventory.
-        // If part is a product, part_ID should be the product_ID
-        uint part_ID;
-        uint quantity;
-    }
-
-    /*
-    Because productId is tracked at a higher level, a full struct is unecessary
-    to store just the partsArray
-
-    struct Product {
-        uint x;
-        Part[] partsArray;
-    }
-    */
-
-    uint public numProducts; // acts as ID
-    mapping (uint => Part[]) public products;
-
-    function addProduct(Part[] memory _partsArray) public returns (uint) {
-        Part[] storage newProduct = products[numProducts++];
-
-        // Copy _partsArray into newProduct
-        for (uint i = 0; i < _partsArray.length; i++) {
-            newProduct.push(_partsArray[i]);
-        }
-        // Todo - remove returning of values from all non-(view/pure) functions
-        return numProducts - 1; // return Product ID
-    }
-
-    function removeProduct(uint productId) public {
-        delete products[productId];
-    }
-    function getNextProductId() public view returns (uint) {
-        return numProducts;
-    }
-    function getPreviousProductId() public view returns (uint) {
-        return numProducts - 1; // underflow if numProducts = 0;
-    }
 }
