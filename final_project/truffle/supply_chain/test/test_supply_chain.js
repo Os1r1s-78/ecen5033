@@ -145,34 +145,6 @@ contract('SupplyChain', (accounts) => {
     assert.equal(enclosureId, 0, "unexpected enclosureId");
 
 
-    // add shipping
-    // Todo: move this to bidding phase.
-
-    async function setupShipping(customer_address) {
-      const shippingHashedDesc = crypto.createHash('sha256').update(customer_address).digest();
-      // Generate a random-ish price based on the address
-      const price = shippingHashedDesc[0] * 10000;
-      const shippingQuantity = 1;
-      var shippingPriceArray = [];
-      shippingPriceArray.push({ quantity: 1, priceWei: price });
-
-      await supplyInstance.addItem(
-        shippingQuantity,
-        shippingHashedDesc,
-        shippingPriceArray,
-        { from: shippingCo }
-      );
-
-      const shippingId = await supplyInstance.getPreviousItemId({ from: shippingCo });
-      return shippingId;
-    }
-
-    const shippingC1Id = await setupShipping("Shipping from KB plant to customer 1 at 123 fake street, Springfield USA");
-    assert.equal(shippingC1Id, 0, "unexpected shippingC1Id");
-    const shippingC2Id = await setupShipping("Shipping from KB plant to customer 2 at 555 somewhere");
-    assert.equal(shippingC2Id, 1, "unexpected shippingC2Id");
-    const shippingC3Id = await setupShipping("Shipping from KB plant to customer 3 where the sidewalk ends");
-    assert.equal(shippingC3Id, 2, "unexpected shippingC3Id");
 
     // ----------------------------- Designer phase
     // Links items and products together to form a "keyboard" product
@@ -230,6 +202,25 @@ contract('SupplyChain', (accounts) => {
     // Customers bid on their own unique "shipped keyboards" product
     // Fulfillment will add their hashed addresses during this step
 
+    async function setupShipping(customer_address) {
+      const shippingHashedDesc = crypto.createHash('sha256').update(customer_address).digest();
+      // Generate a random-ish price based on the address
+      const price = shippingHashedDesc[0] * 10000;
+      const shippingQuantity = 1;
+      var shippingPriceArray = [];
+      shippingPriceArray.push({ quantity: 1, priceWei: price });
+
+      await supplyInstance.addItem(
+        shippingQuantity,
+        shippingHashedDesc,
+        shippingPriceArray,
+        { from: shippingCo }
+      );
+
+      const shippingId = await supplyInstance.getPreviousItemId({ from: shippingCo });
+      return shippingId;
+    }
+
     // Customer 1 wants a single kb
     var shippedKbC1PartsArray = [];
     shippedKbC1PartsArray.push({
@@ -238,29 +229,65 @@ contract('SupplyChain', (accounts) => {
       part_ID: kbProductId.toNumber(),
       quantity: 1
     });
+
+    const shippingC1Id = await setupShipping("Shipping from KB plant to customer 1 at 123 fake street, Springfield USA");
+    assert.equal(shippingC1Id, 0, "unexpected shippingC1Id");
+
     shippedKbC1PartsArray.push({
       part_type: PartType.ITEM,
       manufacturer_ID: shippingCo,
       part_ID: shippingC1Id.toNumber(),
       quantity: 1
     });
+
     await supplyInstance.addProduct(shippedKbC1PartsArray, {from: customer1});
     const shippedKbC1ProductId = await supplyInstance.getPreviousProductId({from: customer1});
 
-    // Place bid
-    // Todo - thinking more about bid management
+    // Customer 2 wants five KBs
+    var shippedKbC2PartsArray = [];
+    shippedKbC2PartsArray.push({
+      part_type: PartType.PRODUCT,
+      manufacturer_ID: kbDesigner,
+      part_ID: kbProductId.toNumber(),
+      quantity: 5
+    });
+
+    const shippingC2Id = await setupShipping("Shipping from KB plant to customer 2 at 555 somewhere");
+    assert.equal(shippingC2Id, 1, "unexpected shippingC2Id");
+
+    shippedKbC2PartsArray.push({
+      part_type: PartType.ITEM,
+      manufacturer_ID: shippingCo,
+      part_ID: shippingC2Id.toNumber(),
+      quantity: 1
+    });
+
+    await supplyInstance.addProduct(shippedKbC2PartsArray, {from: customer2});
+    const shippedKbC2ProductId = await supplyInstance.getPreviousProductId({from: customer2});
 
 
-    // Todo - interleave and rearrange flow to more closely match real-world use case
+    // Customer 3 wants a single kb
+    var shippedKbC3PartsArray = [];
+    shippedKbC3PartsArray.push({
+      part_type: PartType.PRODUCT,
+      manufacturer_ID: kbDesigner,
+      part_ID: kbProductId.toNumber(),
+      quantity: 1
+    });
 
-    // ----------------- Execution phase
-    // External logic to scan for triggering condition
-    // Manually monitoring for triggering condition at first.
+    const shippingC3Id = await setupShipping("Shipping from KB plant to customer 3 where the sidewalk ends");
+    assert.equal(shippingC3Id, 2, "unexpected shippingC3Id");
 
-    // Function to handle triggering and recursive funds transfer
+    shippedKbC3PartsArray.push({
+      part_type: PartType.ITEM,
+      manufacturer_ID: shippingCo,
+      part_ID: shippingC3Id.toNumber(),
+      quantity: 1
+    });
+
+    await supplyInstance.addProduct(shippedKbC3PartsArray, {from: customer3});
+    const shippedKbC3ProductId = await supplyInstance.getPreviousProductId({from: customer3});
   });
-
-
 });
 
 contract('Inventory', (accounts) => {
