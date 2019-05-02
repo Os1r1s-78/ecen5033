@@ -52,26 +52,16 @@ contract('SupplyChain', (accounts) => {
     const c2 = accounts[8];
     const c3 = accounts[9];
 
-    // Supplier phase
-    // todo supplyInstance.addItem(item_info, {from: kbAccessoriesCo});
+    // ---------- Supplier phase
 
     // add keycaps
     const keycapDesc = "Generic keyboard keycaps";
     const keycapHashedDesc = crypto.createHash('sha256').update(keycapDesc).digest();
     const keycapQuantity = 50000;
     var keycapPriceArray = [];
-    keycapPriceArray.push({
-      quantity: 1,
-      priceWei: 10
-    });
-    keycapPriceArray.push({
-      quantity: 100,
-      priceWei: 8
-    });
-    keycapPriceArray.push({
-      quantity: 10000,
-      priceWei: 5
-    });
+    keycapPriceArray.push({ quantity: 1, priceWei: 10 });
+    keycapPriceArray.push({ quantity: 100, priceWei: 8 });
+    keycapPriceArray.push({ quantity: 10000, priceWei: 5 });
 
     await supplyInstance.addItem(
       keycapQuantity,
@@ -83,23 +73,15 @@ contract('SupplyChain', (accounts) => {
     const keycapId = await supplyInstance.getPreviousItemId({from: kbAccessoriesCo});
     assert.equal(keycapId, 0, "unexpected keycapId");
 
+
     // add switches
     const switchDesc = "Premium mechanical keyboard switches";
     const switchHashedDesc = crypto.createHash('sha256').update(switchDesc).digest();
     const switchQuantity = 10000;
     var switchPriceArray = [];
-    switchPriceArray.push({
-      quantity: 1,
-      priceWei: 500
-    });
-    switchPriceArray.push({
-      quantity: 100,
-      priceWei: 400
-    });
-    switchPriceArray.push({
-      quantity: 10000,
-      priceWei: 250
-    });
+    switchPriceArray.push({ quantity: 1, priceWei: 500 });
+    switchPriceArray.push({ quantity: 100, priceWei: 400 });
+    switchPriceArray.push({ quantity: 10000, priceWei: 250 });
 
     await supplyInstance.addItem(
       switchQuantity,
@@ -111,10 +93,98 @@ contract('SupplyChain', (accounts) => {
     const switchId = await supplyInstance.getPreviousItemId({from: kbAccessoriesCo});
     assert.equal(switchId, 1, "unexpected switchId");
 
-    // May eventually need helper contract for managing supplier product IDs
-    // Finish building-up inventory
 
-    // Designer phase
+    // add diodes
+    const diodeDesc = "Some common diodes";
+    const diodeHashedDesc = crypto.createHash('sha256').update(diodeDesc).digest();
+    const diodeQuantity = 30000;
+    var diodePriceArray = [];
+    diodePriceArray.push({ quantity: 1, priceWei: 1000 });
+    diodePriceArray.push({ quantity: 25, priceWei: 500 });
+    diodePriceArray.push({ quantity: 500, priceWei: 300 });
+
+    await supplyInstance.addItem(
+      diodeQuantity,
+      diodeHashedDesc,
+      diodePriceArray,
+      { from: miscElectronicsCo }
+    );
+
+    const diodeId = await supplyInstance.getPreviousItemId({from: miscElectronicsCo});
+    assert.equal(diodeId, 0, "unexpected diodeId");
+
+
+    // add pcbs
+    const pcbDesc = "Custom PCBs for this keyboard";
+    const pcbHashedDesc = crypto.createHash('sha256').update(pcbDesc).digest();
+    const pcbQuantity = 400;
+    var pcbPriceArray = [];
+    pcbPriceArray.push({ quantity: 1, priceWei: 100000 });
+    pcbPriceArray.push({ quantity: 5, priceWei: 50000 });
+    pcbPriceArray.push({ quantity: 10, priceWei: 20000 });
+    pcbPriceArray.push({ quantity: 25, priceWei: 10000 });
+
+    await supplyInstance.addItem(
+      pcbQuantity,
+      pcbHashedDesc,
+      pcbPriceArray,
+      { from: pcbFabCo }
+    );
+
+    const pcbId = await supplyInstance.getPreviousItemId({from: pcbFabCo});
+    assert.equal(pcbId, 0, "unexpected pcbId");
+
+
+    // add enclosures
+    const enclosureDesc = "Robust custom plastic enclosures for this keyboard";
+    const enclosureHashedDesc = crypto.createHash('sha256').update(enclosureDesc).digest();
+    const enclosureQuantity = 300;
+    var enclosurePriceArray = [];
+    enclosurePriceArray.push({ quantity: 5, priceWei: 10000 });
+    enclosurePriceArray.push({ quantity: 25, priceWei: 6000 });
+    enclosurePriceArray.push({ quantity: 100, priceWei: 3000 });
+
+    await supplyInstance.addItem(
+      enclosureQuantity,
+      enclosureHashedDesc,
+      enclosurePriceArray,
+      { from: plasticsCo }
+    );
+
+    const enclosureId = await supplyInstance.getPreviousItemId({from: plasticsCo});
+    assert.equal(enclosureId, 0, "unexpected enclosureId");
+
+
+    // add shipping
+    // Todo: move this to bidding phase.
+
+    async function setupShipping(customer_address) {
+      const shippingHashedDesc = crypto.createHash('sha256').update(customer_address).digest();
+      // Generate a random-ish price based on the address
+      const price = shippingHashedDesc[0] * 10000;
+      const shippingQuantity = 1;
+      var shippingPriceArray = [];
+      shippingPriceArray.push({ quantity: 1, priceWei: price });
+
+      await supplyInstance.addItem(
+        shippingQuantity,
+        shippingHashedDesc,
+        shippingPriceArray,
+        { from: shippingCo }
+      );
+
+      const shippingId = await supplyInstance.getPreviousItemId({ from: shippingCo });
+      return shippingId;
+    }
+
+    const shippingC1Id = await setupShipping("Shipping to customer 1 at 123 fake street, Springfield USA");
+    assert.equal(shippingC1Id, 0, "unexpected shippingC1Id");
+    const shippingC2Id = await setupShipping("Shipping to customer 2 at 555 somewhere");
+    assert.equal(shippingC2Id, 1, "unexpected shippingC2Id");
+    const shippingC3Id = await setupShipping("Shipping to customer 3 where the sidewalk ends");
+    assert.equal(shippingC3Id, 2, "unexpected shippingC3Id");
+
+    // ----------------------------- Designer phase
     // todo supplyInstance.addPart(item_info, {from: kbAccessoriesCo});
     // Links items and products together to form a "keyboard" product
 
