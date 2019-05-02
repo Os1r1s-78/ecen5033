@@ -179,33 +179,80 @@ contract CustomerBids {
 
 contract SupplyChain {
 
-    //uint numInventories; // this will act as an ID.
-    // Inventories tied to their owner address
+    /*
+    Every "supplier" has an "inventory" full of "items".
+    Every "designer" has a "product registry" full of "products".
+    Each "product" is an array of "parts".
+    A "part" is either a "product" or "item".
+    */
+
+    // Supplier inventories tied to their owner address
     // Notes on working with mapping of contracts:
     // https://ethereum.stackexchange.com/questions/32354/mapping-to-contract
     mapping (address => Inventory) public inventories;
-    mapping (address => bool) public inventory_available;
+    mapping (address => bool) public inventoryAvailable;
 
-    // Dummy function for sanity testing of truffle
-    function alwaysPasses() public pure returns (bool) {
-        return true;
-    }
+    // Designer product registries tied to their owner address
+    mapping (address => ProductRegistry) public productRegistries;
+    mapping (address => bool) public productRegistryAvailable;
 
     function addItem(uint quantity, bytes32 description, Inventory.PriceStruct[] memory priceArray) public {
-        if (!inventory_available[msg.sender]) {
-            inventory_available[msg.sender] = true;
+        if (!inventoryAvailable[msg.sender]) {
+            inventoryAvailable[msg.sender] = true;
             inventories[msg.sender] = new Inventory();
         }
         inventories[msg.sender].addItem(quantity, description, priceArray);
     }
 
+    // Todo remaining item functions
+
+    function getNextItemId() public view returns (uint) {
+        if (inventoryAvailable[msg.sender]) {
+            return inventories[msg.sender].getNextItemId();
+        } else {
+            return ~uint(0); // largest uint
+        }
+    }
+
     function getPreviousItemId() public view returns (uint) {
-        if (inventory_available[msg.sender]) {
+        if (inventoryAvailable[msg.sender]) {
             return inventories[msg.sender].getPreviousItemId();
         } else {
             return ~uint(0); // largest uint
         }
     }
+
+
+    function addProduct(ProductRegistry.Part[] memory _partsArray) public {
+        if (!productRegistryAvailable[msg.sender]) {
+            productRegistryAvailable[msg.sender] = true;
+            productRegistries[msg.sender] = new ProductRegistry();
+        }
+        productRegistries[msg.sender].addProduct(_partsArray);
+    }
+
+    function removeProduct(uint productId) public {
+        if (productRegistryAvailable[msg.sender]) {
+            productRegistries[msg.sender].removeProduct(productId);
+        }
+    }
+
+    function getNextProductId() public view returns (uint) {
+        if (productRegistryAvailable[msg.sender]) {
+            productRegistries[msg.sender].getNextProductId();
+        } else {
+            return ~uint(0); // largest uint
+        }
+    }
+
+    function getPreviousProductId() public view returns (uint) {
+        if (productRegistryAvailable[msg.sender]) {
+            productRegistries[msg.sender].getPreviousProductId();
+        } else {
+            return ~uint(0); // largest uint
+        }
+    }
+
 
     /**
     bidsContract parameter may not be required here
@@ -299,6 +346,7 @@ contract ProductRegistry {
         for (uint i = 0; i < _partsArray.length; i++) {
             newProduct.push(_partsArray[i]);
         }
+        // Todo - remove returning of values from all non-(view/pure) functions
         return numProducts - 1; // return Product ID
     }
 

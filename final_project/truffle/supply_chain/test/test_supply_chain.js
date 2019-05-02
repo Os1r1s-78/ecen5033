@@ -17,17 +17,6 @@ async function log_accounts(accounts, n)
 
 contract('SupplyChain', (accounts) => {
 
-  it('should pass trivial test', async () => {
-    assert.equal(0, 0, "0 == 0");
-  });
-
-  it('should pass slightly less trivial test', async () => {
-    const supplyInstance = await SupplyChain.deployed();
-
-    await supplyInstance.alwaysPasses().then(result =>
-      assert.equal(result.valueOf(), true, "does not always pass"));
-  });
-
   it('should pass real-ish world example', async () => {
     const supplyInstance = await SupplyChain.deployed();
 
@@ -42,15 +31,15 @@ contract('SupplyChain', (accounts) => {
     const shippingCo = accounts[5];
     // fulfillment - item
 
-    const designer = accounts[6];
+    const kbDesigner = accounts[6];
     // keyboard - product (all of the above except for fulfillment)
 
     // customers bid on:
     // shipped keyboard - product (keyboard + fulfillment)
 
-    const c1 = accounts[7];
-    const c2 = accounts[8];
-    const c3 = accounts[9];
+    const customer1 = accounts[7];
+    const customer2 = accounts[8];
+    const customer3 = accounts[9];
 
     // ---------- Supplier phase
 
@@ -70,7 +59,8 @@ contract('SupplyChain', (accounts) => {
       { from: kbAccessoriesCo }
     );
 
-    const keycapId = await supplyInstance.getPreviousItemId({from: kbAccessoriesCo});
+    keycapId = await supplyInstance.getPreviousItemId({from: kbAccessoriesCo});
+    //keycapId = keycapId.toNumber(); // Need to convert these from BN for use in parts array. toString() may be better.
     assert.equal(keycapId, 0, "unexpected keycapId");
 
 
@@ -177,22 +167,93 @@ contract('SupplyChain', (accounts) => {
       return shippingId;
     }
 
-    const shippingC1Id = await setupShipping("Shipping to customer 1 at 123 fake street, Springfield USA");
+    const shippingC1Id = await setupShipping("Shipping from KB plant to customer 1 at 123 fake street, Springfield USA");
     assert.equal(shippingC1Id, 0, "unexpected shippingC1Id");
-    const shippingC2Id = await setupShipping("Shipping to customer 2 at 555 somewhere");
+    const shippingC2Id = await setupShipping("Shipping from KB plant to customer 2 at 555 somewhere");
     assert.equal(shippingC2Id, 1, "unexpected shippingC2Id");
-    const shippingC3Id = await setupShipping("Shipping to customer 3 where the sidewalk ends");
+    const shippingC3Id = await setupShipping("Shipping from KB plant to customer 3 where the sidewalk ends");
     assert.equal(shippingC3Id, 2, "unexpected shippingC3Id");
 
     // ----------------------------- Designer phase
-    // todo supplyInstance.addPart(item_info, {from: kbAccessoriesCo});
     // Links items and products together to form a "keyboard" product
 
-    // Bidding phase
+    // Cannot get enum names from solidity, so must make copy here
+    var PartType = {
+      ITEM: 0,
+      PRODUCT: 1,
+    };
+
+    /*
+    Keyboard product contains:
+    75 each of: keycaps, switches, diodes
+    1 each of: pcb, enclosure
+    Simplified version of: https://imgur.com/d6wb1NC
+    */
+
+    var kbPartsArray = [];
+    kbPartsArray.push({
+      part_type: PartType.ITEM,
+      manufacturer_ID: kbAccessoriesCo,
+      part_ID: keycapId.toNumber(), // Convert from BN
+      quantity: 75
+    });
+    kbPartsArray.push({
+      part_type: PartType.ITEM,
+      manufacturer_ID: kbAccessoriesCo,
+      part_ID: switchId.toNumber(),
+      quantity: 75
+    });
+    kbPartsArray.push({
+      part_type: PartType.ITEM,
+      manufacturer_ID: miscElectronicsCo,
+      part_ID: diodeId.toNumber(),
+      quantity: 75
+    });
+    kbPartsArray.push({
+      part_type: PartType.ITEM,
+      manufacturer_ID: pcbFabCo,
+      part_ID: pcbId.toNumber(),
+      quantity: 1
+    });
+    kbPartsArray.push({
+      part_type: PartType.ITEM,
+      manufacturer_ID: plasticsCo,
+      part_ID: enclosureId.toNumber(),
+      quantity: 1
+    });
+
+    await supplyInstance.addProduct(kbPartsArray, {from: kbDesigner});
+    const kbProductId = await supplyInstance.getPreviousProductId({from: kbDesigner});
+    assert.equal(kbProductId, 0, "unexpected kbProductId");
+
+    // ---------------- Bidding phase
     // Customers bid on their own unique "shipped keyboards" product
     // Fulfillment will add their hashed addresses during this step
 
-    // Execution phase
+    // Customer 1 wants a single kb
+    var shippedKbC1PartsArray = [];
+    shippedKbC1PartsArray.push({
+      part_type: PartType.PRODUCT,
+      manufacturer_ID: kbDesigner,
+      part_ID: kbProductId.toNumber(),
+      quantity: 1
+    });
+    shippedKbC1PartsArray.push({
+      part_type: PartType.ITEM,
+      manufacturer_ID: shippingCo,
+      part_ID: shippingC1Id.toNumber(),
+      quantity: 1
+    });
+    await supplyInstance.addProduct(shippedKbC1PartsArray, {from: customer1});
+    const shippedKbC1ProductId = await supplyInstance.getPreviousProductId({from: customer1});
+
+    // Place bid
+    // Todo - thinking more about bid management
+
+
+    // Todo - interleave and rearrange flow to more closely match real-world use case
+
+    // ----------------- Execution phase
     // External logic to scan for triggering condition
     // Manually monitoring for triggering condition at first.
 
@@ -300,6 +361,12 @@ contract('ProductRegistry', (accounts) => {
       part_type: 1,
       manufacturer_ID: '0x00a329c0648769A73afAc7F9381E08FB43dBEA72',
       part_ID: 3,
+      quantity: 4
+    });
+    parts_array.push({
+      part_type: 1,
+      manufacturer_ID: '0x00a329c0648769A73afAc7F9381E08FB43dBEA72',
+      part_ID: 4,
       quantity: 4
     });
 
