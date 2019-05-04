@@ -147,13 +147,14 @@ contract('SupplyChain', (accounts) => {
     var numProducts = await instance.getNumProducts();
     assert.equal(numProducts, 1, "unexpected numProducts");
 
-    // Todo - convert to loop to check all parts
-    const product_part_1 = await instance.getProductPart(prevProductId, 0);
+    for (i = 0; i < parts_array.length; i++) {
+      const product_part = await instance.getProductPart(prevProductId, i);
 
-    assert.equal(product_part_1.part_type, parts_array[0].part_type, "unexpected part_type for product's first part");
-    assert.equal(product_part_1.manufacturer_ID, parts_array[0].manufacturer_ID, "unexpected manufacturer_ID for product's first part");
-    assert.equal(product_part_1.part_ID, parts_array[0].part_ID, "unexpected part_ID of product's first part");
-    assert.equal(product_part_1.quantity, parts_array[0].quantity, "unexpected quantity of product's first part");
+      assert.equal(product_part.part_type, parts_array[i].part_type, "unexpected part_type");
+      assert.equal(product_part.manufacturer_ID, parts_array[i].manufacturer_ID, "unexpected manufacturer_ID");
+      assert.equal(product_part.part_ID, parts_array[i].part_ID, "unexpected part_ID");
+      assert.equal(product_part.quantity, parts_array[i].quantity, "unexpected quantity");
+    }
 
   });
 });
