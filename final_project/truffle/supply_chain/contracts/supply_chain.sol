@@ -114,6 +114,7 @@ contract Inventory {
     }
 }
 
+// Revising this to just a struct in SupplyChain
 contract CustomerBids {
 
     struct Customer {
@@ -198,32 +199,47 @@ contract ProductRegistry {
         uint quantity;
     }
 
-    /*
-    Because productId is tracked at a higher level, a full struct is unecessary
-    to store just the partsArray
+    // This is a way to track all customer bids for each product
+    struct CustomerBid {
+        address customer;
+        uint bidId;
+    }
 
     struct Product {
-        uint x;
         Part[] partsArray;
+        // Bids needs to be another data structure that supports deletion.
+        // Singly-linked list would work.
+        CustomerBid[] customerBids;
+        uint numBids;
     }
-    */
 
     uint public numProducts; // acts as ID
-    mapping (uint => Part[]) public products;
+    mapping (uint => Product) public products;
+    mapping (uint => bool) public productAvailable; // Likely need this
 
-    function addProduct(Part[] memory _partsArray) public returns (uint) {
-        Part[] storage newProduct = products[numProducts++];
+    // Cannot return storage reference to struct:
+    // Suggested below "returns (Record storage)" in last post, but only "memory" return allowed now.
+    // https://forum.ethereum.org/discussion/1994/does-solidity-allow-struct-return-types
+    function getProductAtId(uint id) public returns (Product storage) {
+    // Don't want to return memory copy. Need reference handle to modify
+    //function getProductAtId(uint id) public returns (Product memory) {
+        return products[id];
+    }
+
+    function addProduct(Part[] memory _partsArray) public {
+        productAvailable[numProducts] = true;
+
+        Part[] storage newProduct = products[numProducts++].partsArray;
 
         // Copy _partsArray into newProduct
         for (uint i = 0; i < _partsArray.length; i++) {
             newProduct.push(_partsArray[i]);
         }
-        // Todo - remove returning of values from all non-(view/pure) functions
-        return numProducts - 1; // return Product ID
     }
 
     function removeProduct(uint productId) public {
         delete products[productId];
+        productAvailable[productId] = false;
     }
     function getNextProductId() public view returns (uint) {
         return numProducts;
@@ -307,6 +323,124 @@ contract SupplyChain {
         }
     }
 
+    /*
+    May only bid on products, not items.
+    Could eliminate quantity field by requiring creation of another product to specify quantity.
+    Note that array is not the best long-term solution for tracking bids. Will grow large.
+    */
+    struct Bid {
+        address designer;
+        uint productId;
+        uint bidWei;
+        uint quantity;
+    }
+
+    // Each customer has funds and array of bids
+    struct Customer {
+        uint fundsWei;
+        uint numBids;
+        Bid[] bids;
+    }
+
+    mapping (address => Customer) public customers;
+
+    function placeBid(address designer, uint productId, uint bidWei, uint quantity) public {
+        // Ensure that product is available
+        require(productRegistryAvailable[designer], "Product registry not available for designer");
+        ProductRegistry registry = productRegistries[designer];
+        require(registry.productAvailable(productId), "Product not available in registry");
+
+        // Double-check if uninitialized mapping can be accessed like this.
+        Customer storage customer = customers[msg.sender];
+
+        // Get next bid
+        Bid storage bid = customer.bids[customer.numBids];
+
+        // Copy all values
+        // Might need to create struct instance with Bid({ instead.
+        bid.designer = designer;
+        bid.productId = productId;
+        bid.bidWei = bidWei;
+        bid.quantity = quantity;
+
+        // Add lookup to product registry
+
+        // Cannot get storage reference to Product struct
+        //ProductRegistry.Product storage product = registry.products[productId];
+        //ProductRegistry.Product storage product = registry.products(productId);
+        ProductRegistry.Product storage product = registry.getProductAtId(productId);
+
+        ProductRegistry.CustomerBid storage customerBid = product.customerBids[product.numBids++];
+        customerBid.customer = msg.sender;
+        customerBid.bidId = customer.numBids;
+
+        // Increment customer bid count
+        customer.numBids++;
+
+        // Todo - this function needs testing
+    }
+
+    function removeBid(uint bidId) public {
+        Customer storage customer = customers[msg.sender];
+
+        //Bid storage bid = customer.bids[bidId];
+        //delete bid; // cannot apply delete to storage pointer
+        delete customer.bids[bidId];
+
+        // Todo - There is a current flaw in product registry customer bid
+        // That needs a better data structure to support deletion.
+
+        // Todo - This requires more testing
+    }
+
+    // These will work as long as long as placeBid is called in the same transaction.
+    function getNextBidId() public view returns (uint) {
+        return customers[msg.sender].numBids;
+    }
+    function getPreviousBidId() public view returns (uint) {
+        return customers[msg.sender].numBids - 1; // underflow if numBids = 0;
+    }
+
+    function depositFunds() public payable {
+        // Increment funds
+        customers[msg.sender].fundsWei += msg.value;
+    }
+
+    function withdrawFunds() public {
+        // Transfer all funds
+        msg.sender.transfer(customers[msg.sender].fundsWei);
+        // Reset balance to zero
+        customers[msg.sender].fundsWei = 0;
+    }
+
+    // Also tracking bids on a per-designer-product level for easier scanning.
+    // Tracking these within each product
+
+
+    /*
+    Next Steps:
+    Do some basic testing of new customer and bidding scheme.
+    Should just involve porting over bidding test.
+
+    Create a helper function to print out data with human-readable account names.
+    For example
+        Print all bids.
+        Print product tree. This might be tough.
+
+    Get metamask setup with human-readable account names that match ganache.
+
+    Make website more meaningful. Link with actual code.
+    Possible to populate website with web3.js test code? Likely.
+
+    Show visualization of price curve.
+    Show visualization of all customer bids - this might be tough.
+
+    Create many more accounts and pseudorandomly place bids.
+    Update visualization.
+
+    Deploy on testnet? This may be slow.
+
+    */
 
     /**
     bidsContract parameter may not be required here
@@ -322,6 +456,7 @@ contract SupplyChain {
     and pay all vendors
      */
 
+    /* Need to rework this
     function execute(address bidsAddress, uint productId)  public {
         CustomerBids bidsContract = CustomerBids(bidsAddress);
         uint bids_num = bidsContract.getNextBidId();
@@ -331,7 +466,6 @@ contract SupplyChain {
         bool errorFlag = false;
         uint productNum = 0;
 
-        /* Does not compile
         for(uint i=0;i<bidsContract.numBids();i++) {
             if(bidsContract.bids[i].productId = productId ) {
                 errorFlag = true;
@@ -343,18 +477,14 @@ contract SupplyChain {
                 productNum++;
             }
         }
-        */
 
-        /**
-        Needs to be checked, whole execute should be reverted when
-        customer with bid does not have enough funds for the item
-         */
+        // Needs to be checked, whole execute should be reverted when
+        // customer with bid does not have enough funds for the item
         if(errorFlag)
             revert();
 
-        /**
-        Each vendor needs to be paid productNum * itemPrice
-         */
+        // Each vendor needs to be paid productNum * itemPrice
     }
+    */
 
 }
