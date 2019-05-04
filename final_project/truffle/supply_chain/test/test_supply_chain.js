@@ -1,11 +1,11 @@
 const SupplyChain = artifacts.require("SupplyChain");
+/*
 const Inventory = artifacts.require("Inventory");
 const ProductRegistry = artifacts.require("ProductRegistry");
 const CustomerBids = artifacts.require("CustomerBids");
 const StructMapping = artifacts.require("StructMapping");
 const StructAccess = artifacts.require("StructAccess");
-const crypto = require("crypto");
-// Eventually want to omit directly including inventory contract.
+*/
 
 async function log_accounts(accounts, n)
 {
@@ -16,85 +16,98 @@ async function log_accounts(accounts, n)
 }
 
 
-contract('Inventory', (accounts) => {
+contract('SupplyChain', (accounts) => {
   it('should pass Inventory trivial test', async () => {
     assert.equal(0, 0, "0 == 0");
   });
 
   it('should start with 0 items in inventory', async () => {
-    const inventoryInstance = await Inventory.deployed();
-    const initialItems = await inventoryInstance.numItems();
+    const instance = await SupplyChain.deployed();
 
+    const inventory = await instance.inventories(accounts[0]);
+    const initialItems = inventory.numItems;
+    //console.log({initialItems});
     assert.equal(initialItems, 0, "some items already in inventory");
-  });
 
-  it('should be able to pass struct', async () => {
-    const inventoryInstance = await Inventory.deployed();
-    const price_struct = {
-        quantity: 100,
-        priceWei: 200
-    };
+    // Interesting that this doesn't work:
+    // Possible strange interaction with await and struct member
+    //const initialItems2 = await instance.inventories(accounts[0]).numItems;
+    //console.log({initialItems2});
+    //assert.equal(initialItems2, 0, "some items already in inventory");
 
-    await inventoryInstance.use_to_test_passing_struct_from_web3(price_struct);
-    const internal_ps = await inventoryInstance.temporary_price_struct_for_testing();
-
-    assert.equal(internal_ps.quantity, price_struct.quantity);
-    assert.equal(internal_ps.priceWei, price_struct.priceWei);
+    // This is probably the best way to execute this test
+    const initialItems3 = (await instance.inventories(accounts[0])).numItems;
+    //console.log({initialItems3});
+    assert.equal(initialItems3, 0, "some items already in inventory");
   });
 
   it('should be able to add inventory item', async () => {
-    const inventoryInstance = await Inventory.deployed();
+    //const inventoryInstance = await Inventory.deployed();
+
+    const instance = await SupplyChain.deployed();
+
     var price_array = [];
-    const descHash = crypto.createHash('sha256').update('sample description').digest();
+    const descHash = await instance.createHash('sample description');
+    // Interesting that these produce different hashes
+    //const crypto = require("crypto");
+    //const descHash = crypto.createHash('sha256').update('sample description').digest();
+    //console.log({descHash});
+    //console.log({descHashPure});
+    //assert.equal(descHash, descHashPure, "Unequal hashes");
     price_array.push({
         quantity: 100,
         priceWei: 200
     });
 
-    var nextId = await inventoryInstance.getNextItemId();
-    await inventoryInstance.addItem(30, descHash, price_array);
-    var prevId = await inventoryInstance.getPreviousItemId();
+    var nextId = await instance.getNextItemId();
+    await instance.addItem(30, descHash, price_array);
+    var prevId = await instance.getPreviousItemId();
     assert.equal(nextId, 0);
     assert.isTrue(nextId.eq(prevId));
 
-    var numItems = await inventoryInstance.numItems();
+    var numItems = await instance.getNumItems();
+    // This also works in place of getNumItems()
+    //var numItems = (await instance.inventories(accounts[0])).numItems;
     assert.equal(numItems, 1);
-    var item = await inventoryInstance.items(prevId);
+    var item = await instance.getItem(prevId);
 
     assert.equal(item.quantityAvailable, 30, "unexpected quantityAvailable");
-    var price_list = await inventoryInstance.get_priceStruct(0,0);
+    var price_list = await instance.getPriceStruct(0, 0);
 
     assert.equal(price_list.quantity, 100 , "unexpected price list quantity");
     assert.equal(price_list.priceWei, 200 , "unexpected price list price");
 
     // second item being added to the inventory
-    const descHash2 = crypto.createHash('sha256').update('second sample description').digest();
+    const descHash2 = await instance.createHash('second sample description');
     price_array.push({
       quantity: 456,
       priceWei: 678
     });
 
-
-    nextId = await inventoryInstance.getNextItemId();
-    await inventoryInstance.addItem(40, descHash2, price_array);
-    numItems = await inventoryInstance.numItems();
+    nextId = await instance.getNextItemId();
+    await instance.addItem(40, descHash2, price_array);
+    numItems = (await instance.inventories(accounts[0])).numItems;
     assert.equal(numItems, 2);
-    prevId = await inventoryInstance.getPreviousItemId();
+    prevId = await instance.getPreviousItemId();
     assert.equal(nextId, 1);
     assert.isTrue(nextId.eq(prevId));
 
-    item = await inventoryInstance.items(prevId);
+    item = await instance.getItem(prevId);
     assert.equal(item.quantityAvailable, 40, "unexpected quantityAvailable");
 
-    price_list = await inventoryInstance.get_priceStruct(prevId,1);
+    price_list = await instance.getPriceStruct(prevId, 1);
     assert.equal(price_list.quantity, 456 , "unexpected price list quantity");
     assert.equal(price_list.priceWei, 678 , "unexpected price list price");
 
-    nextId = await inventoryInstance.getNextItemId();
+    nextId = await instance.getNextItemId();
     assert.equal(nextId, 2);
   });
+
+  // Todo - there are many untested inventory functions:
+  // replaceQuantity, incrementQuantity, decrementQuantity, replacePrices
 });
 
+/*
 
 contract('ProductRegistry', (accounts) => {
   it('should pass ProductRegistry trivial test', async () => {
@@ -534,7 +547,7 @@ contract('SupplyChain', (accounts) => {
 
     // add keycaps
     const keycapDesc = "Generic keyboard keycaps";
-    const keycapHashedDesc = crypto.createHash('sha256').update(keycapDesc).digest();
+    const keycapHashedDesc = await instance.createHash(keycapDesc);
     const keycapQuantity = 50000;
     var keycapPriceArray = [];
     keycapPriceArray.push({ quantity: 1, priceWei: 10 });
@@ -555,7 +568,7 @@ contract('SupplyChain', (accounts) => {
 
     // add switches
     const switchDesc = "Premium mechanical keyboard switches";
-    const switchHashedDesc = crypto.createHash('sha256').update(switchDesc).digest();
+    const switchHashedDesc = await instance.createHash(switchDesc);
     const switchQuantity = 10000;
     var switchPriceArray = [];
     switchPriceArray.push({ quantity: 1, priceWei: 500 });
@@ -575,7 +588,7 @@ contract('SupplyChain', (accounts) => {
 
     // add diodes
     const diodeDesc = "Some common diodes";
-    const diodeHashedDesc = crypto.createHash('sha256').update(diodeDesc).digest();
+    const diodeHashedDesc = await instance.createHash(diodeDesc);
     const diodeQuantity = 30000;
     var diodePriceArray = [];
     diodePriceArray.push({ quantity: 1, priceWei: 1000 });
@@ -595,7 +608,7 @@ contract('SupplyChain', (accounts) => {
 
     // add pcbs
     const pcbDesc = "Custom PCBs for this keyboard";
-    const pcbHashedDesc = crypto.createHash('sha256').update(pcbDesc).digest();
+    const pcbHashedDesc = await instance.createHash(pcbDesc);
     const pcbQuantity = 400;
     var pcbPriceArray = [];
     pcbPriceArray.push({ quantity: 1, priceWei: 100000 });
@@ -616,7 +629,7 @@ contract('SupplyChain', (accounts) => {
 
     // add enclosures
     const enclosureDesc = "Robust custom plastic enclosures for this keyboard";
-    const enclosureHashedDesc = crypto.createHash('sha256').update(enclosureDesc).digest();
+    const enclosureHashedDesc = await instance.createHash(enclosureDesc);
     const enclosureQuantity = 300;
     var enclosurePriceArray = [];
     enclosurePriceArray.push({ quantity: 5, priceWei: 10000 });
@@ -644,12 +657,10 @@ contract('SupplyChain', (accounts) => {
       PRODUCT: 1,
     };
 
-    /*
-    Keyboard product contains:
-    75 each of: keycaps, switches, diodes
-    1 each of: pcb, enclosure
-    Simplified version of: https://imgur.com/d6wb1NC
-    */
+    // Keyboard product contains:
+    // 75 each of: keycaps, switches, diodes
+    // 1 each of: pcb, enclosure
+    // Simplified version of: https://imgur.com/d6wb1NC
 
     var kbPartsArray = [];
     kbPartsArray.push({
@@ -692,7 +703,7 @@ contract('SupplyChain', (accounts) => {
     // Fulfillment will add their hashed addresses during this step
 
     async function setupShipping(customer_address) {
-      const shippingHashedDesc = crypto.createHash('sha256').update(customer_address).digest();
+      const shippingHashedDesc = await instance.createHash(customer_address);
       // Generate a random-ish price based on the address
       const price = shippingHashedDesc[0] * 10000;
       const shippingQuantity = 1;
@@ -778,3 +789,4 @@ contract('SupplyChain', (accounts) => {
     const shippedKbC3ProductId = await supplyInstance.getPreviousProductId({from: customer3});
   });
 });
+*/

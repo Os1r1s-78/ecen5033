@@ -3,116 +3,6 @@ pragma solidity ^0.5.0;
 pragma experimental ABIEncoderV2;
 
 
-contract Inventory {
-    // How to let other contracts know about these structs?
-    // Do they need to be put in another shared contract?
-    //   A: Should be able to use them with `Inventory.PriceStruct`
-    struct PriceStruct {
-        uint quantity;
-        uint priceWei;
-    }
-    struct Item {
-        //id; // ID tracked in higher-level data structure
-        uint quantityAvailable;
-        uint dummy; // Amazing that this is required to get code to work
-        bytes32 hashedDescription;
-        PriceStruct[] prices; // Probably don't need to specify "storage" type. Seems implied.
-    }
-
-    /**
-    Put this back as it was failing a test, will remove this and the test case later
-    */
-    PriceStruct public temporary_price_struct_for_testing;
-    function use_to_test_passing_struct_from_web3(PriceStruct memory ps) public {
-        temporary_price_struct_for_testing = ps;
-    }
-
-
-    // Probably want to store items as hash map for lookup by ID
-    uint public numItems; // this will act as an ID.
-    mapping (uint => Item) public items;
-    // No need for owner here, since owner address is key to parent mapping
-    //address owner;
-    // Just single inventory per owner for now
-    //id; // ID necessary to allow multiple Inventories per owner
-    // ID tracked in higher level data structure
-
-    function replaceQuantity(uint itemId, uint newQuantity) public {
-        items[itemId].quantityAvailable = newQuantity;
-    }
-
-    // Suspected atomicity issues between reading quantity and calling replace.
-    // So also allowing "increment", which may also be negative.
-    // Considering renaming increment to "adjustQuantity".
-    /* Type conversion issues means it's easier to just create two separate functions
-    function incrementQuantity(uint itemId, int increment) public {
-        items[itemId].quantityAvailable += increment;
-    }
-    */
-    function incrementQuantity(uint itemId, uint increment) public {
-        items[itemId].quantityAvailable += increment;
-    }
-    function decrementQuantity(uint itemId, uint decrement) public {
-        items[itemId].quantityAvailable -= decrement;
-    }
-
-
-    function replacePrices(uint itemId, PriceStruct[] memory priceArray) public {
-        // Direct copy not supported: https://github.com/ethereum/solidity/issues/3446
-        //items[itemId].prices = priceArray;
-        // Must use loop instead:
-        // Delete array first. This just sets all elements to zero
-        delete items[itemId].prices;
-        // Todo, check if deleting reference works instead.
-        //delete prices;
-
-        // Not sure if memory is better than storage. Should just be a reference to storage
-        PriceStruct[] storage prices = items[itemId].prices; // reference
-
-        /**
-        World have been nice to have helper function to do
-        this here and in additem, but function parametrs have to be
-        memeory and memory items don't have the push.
-        There maybe a way to get around, to figure out later
-         */
-        for (uint i = 0; i < prices.length; i++)
-        {
-            items[itemId].prices.push(priceArray[i]);
-        }
-    }
-
-
-    function get_priceStruct(uint itemnum, uint arr_ind) public view returns (PriceStruct memory){
-
-        return items[itemnum].prices[arr_ind];
-    }
-
-    function addItem(uint quantity, bytes32 description, PriceStruct[] memory priceArray) public returns (uint) {
-
-        items[numItems].quantityAvailable = quantity;
-        items[numItems].hashedDescription = description;
-
-        for (uint i = 0; i < priceArray.length; i++) {
-            items[numItems].prices.push(priceArray[i]);
-        }
-
-        numItems++;
-    }
-
-    /*
-    How will the owner be able to track item IDs?
-    Can just request with view function.
-    Seem to have issues with retrieving values from non-pure/view functions,
-    so can't get this value from addItem call.
-    These will work as long as long as addItem is called in the same transaction.
-    */
-    function getNextItemId() public view returns (uint) {
-        return numItems;
-    }
-    function getPreviousItemId() public view returns (uint) {
-        return numItems - 1; // underflow if numItems = 0;
-    }
-}
 
 // Revising this to just a struct in SupplyChain
 contract CustomerBids {
@@ -217,6 +107,7 @@ contract ProductRegistry {
     mapping (uint => Product) public products;
     mapping (uint => bool) public productAvailable; // Likely need this
 
+/*
     // Cannot return storage reference to struct:
     // Suggested below "returns (Record storage)" in last post, but only "memory" return allowed now.
     // https://forum.ethereum.org/discussion/1994/does-solidity-allow-struct-return-types
@@ -225,6 +116,7 @@ contract ProductRegistry {
     //function getProductAtId(uint id) public returns (Product memory) {
         return products[id];
     }
+    */
 
     function addProduct(Part[] memory _partsArray) public {
         productAvailable[numProducts] = true;
@@ -258,39 +150,153 @@ contract SupplyChain {
     A "part" is either a "product" or "item".
     */
 
+    // ---------- Inventory section --------------
+
+    struct PriceStruct {
+        uint quantity;
+        uint priceWei;
+    }
+
+    struct Item {
+        //id; // ID tracked in higher-level data structure
+        uint quantityAvailable;
+        uint dummy; // Amazing that this is required to get code to work
+        bytes32 hashedDescription;
+        PriceStruct[] prices; // Probably don't need to specify "storage" type. Seems implied.
+    }
+
+    struct Inventory {
+        uint numItems; // this will act as an ID.
+        uint dummy;
+        mapping (uint => Item) items;
+    }
+
     // Supplier inventories tied to their owner address
     // Notes on working with mapping of contracts:
     // https://ethereum.stackexchange.com/questions/32354/mapping-to-contract
     mapping (address => Inventory) public inventories;
     mapping (address => bool) public inventoryAvailable;
 
-    // Designer product registries tied to their owner address
-    mapping (address => ProductRegistry) public productRegistries;
-    mapping (address => bool) public productRegistryAvailable;
-
-    function addItem(uint quantity, bytes32 description, Inventory.PriceStruct[] memory priceArray) public {
+    function addItem(uint quantity, bytes32 description, PriceStruct[] memory priceArray) public {
         if (!inventoryAvailable[msg.sender]) {
             inventoryAvailable[msg.sender] = true;
-            inventories[msg.sender] = new Inventory();
+            // Unnecessary now that we're using structs instead of contracts
+            //inventories[msg.sender] = new Inventory();
         }
-        inventories[msg.sender].addItem(quantity, description, priceArray);
+
+        // Helper references to save typing
+        Inventory storage inventory = inventories[msg.sender];
+        Item storage item = inventory.items[inventory.numItems];
+
+        item.quantityAvailable = quantity;
+        item.hashedDescription = description;
+
+        for (uint i = 0; i < priceArray.length; i++) {
+            item.prices.push(priceArray[i]);
+        }
+
+        inventory.numItems++;
     }
 
+    // Cannot return values from non-pure/view functions, so can't get ID from addItem call.
     function getNextItemId() public view returns (uint) {
         if (inventoryAvailable[msg.sender]) {
-            return inventories[msg.sender].getNextItemId();
+            return inventories[msg.sender].numItems;
         } else {
-            return ~uint(0); // largest uint
+            return 0; // Next id will be zero if inventory does not exist yet
         }
     }
 
     function getPreviousItemId() public view returns (uint) {
-        if (inventoryAvailable[msg.sender]) {
-            return inventories[msg.sender].getPreviousItemId();
+        if (inventoryAvailable[msg.sender] && inventories[msg.sender].numItems != 0) {
+            return inventories[msg.sender].numItems - 1;
         } else {
             return ~uint(0); // largest uint
         }
     }
+
+    function replaceQuantity(uint itemId, uint newQuantity) public {
+        require(inventoryAvailable[msg.sender], "Inventory not available");
+        inventories[msg.sender].items[itemId].quantityAvailable = newQuantity;
+    }
+
+    // Suspected atomicity issues between reading quantity and calling replace.
+    // So also allowing "increment", which may also be negative.
+    // Considering renaming increment to "adjustQuantity".
+    /* Type conversion issues means it's easier to just create two separate functions
+    function incrementQuantity(uint itemId, int increment) public {
+        inventories[msg.sender].items[itemId].quantityAvailable += increment;
+    }
+    */
+    function incrementQuantity(uint itemId, uint increment) public {
+        require(inventoryAvailable[msg.sender], "Inventory not available");
+        inventories[msg.sender].items[itemId].quantityAvailable += increment;
+    }
+    function decrementQuantity(uint itemId, uint decrement) public {
+        require(inventoryAvailable[msg.sender], "Inventory not available");
+        inventories[msg.sender].items[itemId].quantityAvailable -= decrement;
+    }
+
+
+    function replacePrices(uint itemId, PriceStruct[] memory priceArray) public {
+        require(inventoryAvailable[msg.sender], "Inventory not available");
+
+        // Helper references to save typing
+        Inventory storage inventory = inventories[msg.sender];
+        Item storage item = inventory.items[inventory.numItems];
+
+
+        // Direct copy not supported: https://github.com/ethereum/solidity/issues/3446
+        //item.prices = priceArray;
+        // Must use loop instead:
+        // Delete array first. This just sets all elements to zero
+        delete item.prices;
+        // Todo, check if deleting reference works instead.
+        //delete prices;
+
+        PriceStruct[] storage prices = item.prices;
+
+        /**
+        Would have been nice to have helper function to do
+        this here and in additem, but function parameters have to be
+        memeory and memory items don't have the push.
+        There maybe a way to get around, to figure out later
+         */
+        for (uint i = 0; i < prices.length; i++) {
+            prices.push(priceArray[i]);
+        }
+    }
+
+    // Helper getter functions for working with web3
+    // getNumItems() is just slightly more convenient.
+    // getItem and getPriceStruct are required, since there is not other way to access this data
+
+    function getNumItems() public view returns (uint) {
+        if (inventoryAvailable[msg.sender]) {
+            return inventories[msg.sender].numItems;
+        } else {
+            return 0; // Zero items if inventory does not exist yet
+        }
+    }
+
+    function getItem(uint itemId) public view returns (Item memory){
+        require(inventoryAvailable[msg.sender], "Inventory not available");
+        return inventories[msg.sender].items[itemId];
+    }
+
+    function getPriceStruct(uint itemId, uint priceStructIndex) public view returns (PriceStruct memory){
+        require(inventoryAvailable[msg.sender], "Inventory not available");
+        return inventories[msg.sender].items[itemId].prices[priceStructIndex];
+    }
+
+
+
+
+
+
+    // Designer product registries tied to their owner address
+    mapping (address => ProductRegistry) public productRegistries;
+    mapping (address => bool) public productRegistryAvailable;
 
 
     function addProduct(ProductRegistry.Part[] memory _partsArray) public {
@@ -368,11 +374,11 @@ contract SupplyChain {
         // Cannot get storage reference to Product struct
         //ProductRegistry.Product storage product = registry.products[productId];
         //ProductRegistry.Product storage product = registry.products(productId);
-        ProductRegistry.Product storage product = registry.getProductAtId(productId);
+        //ProductRegistry.Product storage product = registry.getProductAtId(productId);
 
-        ProductRegistry.CustomerBid storage customerBid = product.customerBids[product.numBids++];
-        customerBid.customer = msg.sender;
-        customerBid.bidId = customer.numBids;
+        //ProductRegistry.CustomerBid storage customerBid = product.customerBids[product.numBids++];
+        //customerBid.customer = msg.sender;
+        //customerBid.bidId = customer.numBids;
 
         // Increment customer bid count
         customer.numBids++;
@@ -487,4 +493,8 @@ contract SupplyChain {
     }
     */
 
+    function createHash(string memory data)
+    public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(data));
+    }
 }
