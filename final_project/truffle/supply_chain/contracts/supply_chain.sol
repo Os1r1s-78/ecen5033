@@ -68,78 +68,6 @@ contract CustomerBids {
     }
 }
 
-contract ProductRegistry {
-    // Parts can be items or products
-    enum PART_TYPE {
-        ITEM,
-        PRODUCT
-    }
-
-    struct Part {
-        PART_TYPE part_type;
-        // If part is item, then manufacturer_ID is supplier address
-        // If part is product, then manufacturer_ID is designer address
-        address manufacturer_ID;
-
-        //bytes32 hashedDescription;
-        // If part is an item, part_ID should be the item_id in the
-        // manufacturer's inventory.
-        // If part is a product, part_ID should be the product_ID
-        uint part_ID;
-        uint quantity;
-    }
-
-    // This is a way to track all customer bids for each product
-    struct CustomerBid {
-        address customer;
-        uint bidId;
-    }
-
-    struct Product {
-        Part[] partsArray;
-        // Bids needs to be another data structure that supports deletion.
-        // Singly-linked list would work.
-        CustomerBid[] customerBids;
-        uint numBids;
-    }
-
-    uint public numProducts; // acts as ID
-    mapping (uint => Product) public products;
-    mapping (uint => bool) public productAvailable; // Likely need this
-
-/*
-    // Cannot return storage reference to struct:
-    // Suggested below "returns (Record storage)" in last post, but only "memory" return allowed now.
-    // https://forum.ethereum.org/discussion/1994/does-solidity-allow-struct-return-types
-    function getProductAtId(uint id) public returns (Product storage) {
-    // Don't want to return memory copy. Need reference handle to modify
-    //function getProductAtId(uint id) public returns (Product memory) {
-        return products[id];
-    }
-    */
-
-    function addProduct(Part[] memory _partsArray) public {
-        productAvailable[numProducts] = true;
-
-        Part[] storage newProduct = products[numProducts++].partsArray;
-
-        // Copy _partsArray into newProduct
-        for (uint i = 0; i < _partsArray.length; i++) {
-            newProduct.push(_partsArray[i]);
-        }
-    }
-
-    function removeProduct(uint productId) public {
-        delete products[productId];
-        productAvailable[productId] = false;
-    }
-    function getNextProductId() public view returns (uint) {
-        return numProducts;
-    }
-    function getPreviousProductId() public view returns (uint) {
-        return numProducts - 1; // underflow if numProducts = 0;
-    }
-}
 
 contract SupplyChain {
 
@@ -290,44 +218,124 @@ contract SupplyChain {
     }
 
 
+    // ---------- Product registry section --------------
 
+    // Parts can be items or products
+    enum PART_TYPE {
+        ITEM,
+        PRODUCT
+    }
 
+    struct Part {
+        PART_TYPE part_type;
+        // If part is item, then manufacturer_ID is supplier address
+        // If part is product, then manufacturer_ID is designer address
+        address manufacturer_ID;
 
+        //bytes32 hashedDescription;
+        // If part is an item, part_ID should be the item_id in the
+        // manufacturer's inventory.
+        // If part is a product, part_ID should be the product_ID
+        uint part_ID;
+        uint quantity;
+    }
+
+    // This is a way to track all customer bids for each product
+    struct ProductBid {
+        address customer;
+        uint bidId;
+    }
+
+    struct Product {
+        Part[] partsArray;
+        // Bids needs to be another data structure that supports deletion.
+        // Singly-linked list would work.
+        ProductBid[] productBids;
+        uint numBids;
+        uint dummy;
+    }
+
+    struct ProductRegistry {
+        uint numProducts; // acts as ID
+        uint dummy;
+        mapping (uint => Product) products;
+        mapping (uint => bool) productAvailable; // Likely need this
+    }
 
     // Designer product registries tied to their owner address
     mapping (address => ProductRegistry) public productRegistries;
     mapping (address => bool) public productRegistryAvailable;
 
 
-    function addProduct(ProductRegistry.Part[] memory _partsArray) public {
+    function addProduct(Part[] memory partsArray) public {
         if (!productRegistryAvailable[msg.sender]) {
             productRegistryAvailable[msg.sender] = true;
-            productRegistries[msg.sender] = new ProductRegistry();
         }
-        productRegistries[msg.sender].addProduct(_partsArray);
+
+        ProductRegistry storage registry = productRegistries[msg.sender];
+        registry.productAvailable[registry.numProducts] = true;
+
+        Part[] storage newProduct = registry.products[registry.numProducts++].partsArray;
+
+        // Copy partsArray into newProduct
+        for (uint i = 0; i < partsArray.length; i++) {
+            newProduct.push(partsArray[i]);
+        }
     }
 
     function removeProduct(uint productId) public {
-        if (productRegistryAvailable[msg.sender]) {
-            productRegistries[msg.sender].removeProduct(productId);
-        }
+        require(productRegistryAvailable[msg.sender], "Product registry not available");
+
+        ProductRegistry storage registry = productRegistries[msg.sender];
+
+        delete registry.products[productId];
+        registry.productAvailable[productId] = false;
     }
 
     function getNextProductId() public view returns (uint) {
         if (productRegistryAvailable[msg.sender]) {
-            productRegistries[msg.sender].getNextProductId();
+            return productRegistries[msg.sender].numProducts;
+        } else {
+            return 0; // Next id will be zero if registry does not exist yet
+        }
+    }
+
+    function getPreviousProductId() public view returns (uint) {
+        if (productRegistryAvailable[msg.sender] && productRegistries[msg.sender].numProducts != 0) {
+            return productRegistries[msg.sender].numProducts - 1;
         } else {
             return ~uint(0); // largest uint
         }
     }
 
-    function getPreviousProductId() public view returns (uint) {
+    // Helper getter functions for working with web3
+    // getNumProducts() is just slightly more convenient.
+    // getProduct, getProductPart, and getProductBid are required,
+    // since there is not other way to access this data.
+
+    function getNumProducts() public view returns (uint) {
         if (productRegistryAvailable[msg.sender]) {
-            productRegistries[msg.sender].getPreviousProductId();
+            return productRegistries[msg.sender].numProducts;
         } else {
-            return ~uint(0); // largest uint
+            return 0; // Zero items if product registry does not exist yet
         }
     }
+
+    function getProduct(uint productId) public view returns (Product memory) {
+        require(productRegistryAvailable[msg.sender], "Product Registry not available");
+        return productRegistries[msg.sender].products[productId];
+    }
+
+    function getProductPart(uint productId, uint partIndex) public view returns (Part memory) {
+        require(productRegistryAvailable[msg.sender], "Product Registry not available");
+        return productRegistries[msg.sender].products[productId].partsArray[partIndex];
+    }
+
+    function getProductBid(uint productId, uint bidIndex) public view returns (ProductBid memory) {
+        require(productRegistryAvailable[msg.sender], "Product Registry not available");
+        return productRegistries[msg.sender].products[productId].productBids[bidIndex];
+    }
+
 
     /*
     May only bid on products, not items.
@@ -353,8 +361,8 @@ contract SupplyChain {
     function placeBid(address designer, uint productId, uint bidWei, uint quantity) public {
         // Ensure that product is available
         require(productRegistryAvailable[designer], "Product registry not available for designer");
-        ProductRegistry registry = productRegistries[designer];
-        require(registry.productAvailable(productId), "Product not available in registry");
+        ProductRegistry storage registry = productRegistries[designer];
+        require(registry.productAvailable[productId], "Product not available in registry");
 
         // Double-check if uninitialized mapping can be accessed like this.
         Customer storage customer = customers[msg.sender];
@@ -376,9 +384,9 @@ contract SupplyChain {
         //ProductRegistry.Product storage product = registry.products(productId);
         //ProductRegistry.Product storage product = registry.getProductAtId(productId);
 
-        //ProductRegistry.CustomerBid storage customerBid = product.customerBids[product.numBids++];
-        //customerBid.customer = msg.sender;
-        //customerBid.bidId = customer.numBids;
+        //ProductRegistry.ProductBid storage productBid = product.productBids[product.numBids++];
+        //productBid.customer = msg.sender;
+        //productBid.bidId = customer.numBids;
 
         // Increment customer bid count
         customer.numBids++;

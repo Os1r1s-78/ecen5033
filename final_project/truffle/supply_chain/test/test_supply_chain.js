@@ -107,22 +107,22 @@ contract('SupplyChain', (accounts) => {
   // replaceQuantity, incrementQuantity, decrementQuantity, replacePrices
 });
 
-/*
 
-contract('ProductRegistry', (accounts) => {
+contract('SupplyChain', (accounts) => {
   it('should pass ProductRegistry trivial test', async () => {
     assert.equal(0, 0, "0 == 0");
   });
 
   it('should start with 0 products in registry', async () => {
-    const productRegistryInstance = await ProductRegistry.deployed();
-    const initialItems = await productRegistryInstance.numProducts();
+    const instance = await SupplyChain.deployed();
+
+    const initialItems = await instance.getNumProducts();
 
     assert.equal(initialItems, 0, "registry not initialized empty");
   });
 
   it('should correctly add a product to the registry', async () => {
-    const productRegistryInstance = await ProductRegistry.deployed();
+    const instance = await SupplyChain.deployed();
 
     var parts_array = [];
     parts_array.push({
@@ -138,15 +138,17 @@ contract('ProductRegistry', (accounts) => {
       quantity: 4
     });
 
-    var nextProductId = await productRegistryInstance.getNextProductId();
-    await productRegistryInstance.addProduct(parts_array);
-    var prevProductId = await productRegistryInstance.getPreviousProductId();
+    var nextProductId = await instance.getNextProductId();
+    await instance.addProduct(parts_array);
+    var prevProductId = await instance.getPreviousProductId();
     assert.equal(nextProductId, 0);
     assert.isTrue(nextProductId.eq(prevProductId));
 
-    var numProducts = await productRegistryInstance.numProducts();
+    var numProducts = await instance.getNumProducts();
     assert.equal(numProducts, 1, "unexpected numProducts");
-    const product_part_1 = await productRegistryInstance.products(prevProductId, 0);
+
+    // Todo - convert to loop to check all parts
+    const product_part_1 = await instance.getProductPart(prevProductId, 0);
 
     assert.equal(product_part_1.part_type, parts_array[0].part_type, "unexpected part_type for product's first part");
     assert.equal(product_part_1.manufacturer_ID, parts_array[0].manufacturer_ID, "unexpected manufacturer_ID for product's first part");
@@ -155,6 +157,8 @@ contract('ProductRegistry', (accounts) => {
 
   });
 });
+/*
+
 
 // Old test
 contract('CustomerBids', (accounts) => {
