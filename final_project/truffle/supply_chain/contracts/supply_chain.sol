@@ -132,6 +132,7 @@ contract SupplyChain {
         } else {
             return 0; // Next id will be zero if inventory does not exist yet
         }
+        // Todo - modify to zero by default if not available
     }
 
     function getPreviousItemId() public view returns (uint) {
@@ -346,25 +347,39 @@ contract SupplyChain {
     // ---------- Bids section --------------
 
     /*
+    Each customer has deposited funds, and a way to retrieve their previous bid ID.
+    Not wasting storage to protect customers against grabing a non-existing previous bid ID.
+    - Will just get zero (potentially valid ID) in that case.
+    Could alternatively use events as a way to retrieve the previous bid ID.
+
+    Bids for all customers and products are tracked in shared list.
+    This list supports deletion and lookup by bidID.
+
     May only bid on products, not items.
     Could eliminate quantity field by requiring creation of another product to specify quantity.
-    Note that array is not the best long-term solution for tracking bids. Will grow large.
+
     */
     struct Bid {
+        address customer;
+        // Todo - eventually use shared product registry and eliminate designer
         address designer;
         uint productId;
-        uint bidWei;
+        uint bidWei; // @ quantity 1, so totalBid = bidWei * quantity
         uint quantity;
+        uint bidArrayIndex;
     }
 
-    // Each customer has funds and array of bids
     struct Customer {
         uint fundsWei;
-        uint numBids;
-        Bid[] bids;
+        uint previousBidId; // no error protection against non-existant previousBidId
     }
 
+    // This ensures each bidID is unique
+    uint nextBidId;
+
     mapping (address => Customer) public customers;
+    mapping (uint => Bid) public bids;
+    uint[] public bidArray;
 
     function placeBid(address designer, uint productId, uint bidWei, uint quantity) public {
         // Ensure that product is available
@@ -372,47 +387,20 @@ contract SupplyChain {
         ProductRegistry storage registry = productRegistries[designer];
         require(registry.products[productId].available, "Product not available in registry");
 
-        // Double-check if uninitialized mapping can be accessed like this.
         Customer storage customer = customers[msg.sender];
+        customer.previousBidId = nextBidId;
 
-        // Get next bid
-        // Attempting to access empty bids array here. Need to push bid into this array instead.
-        // Bid storage bid = customer.bids[customer.numBids];
+        Bid storage bid = bids[nextBidId];
+        bid.bidArrayIndex = bidArray.length;
+        bidArray.push(nextBidId);
 
-        /*
-        Requirements of ideal data structure for tracking bids:
-        No need to scan through all customer bids.
-        Only really need to scan through product bids.
-        Need to lookup bid by reference.
-
-        Might be best to just track single large list of bids.
-        Can re-scan list to identify all bids associated with a customer or product.
-        */
-    /*
-
-        // Copy all values
-        // Might need to create struct instance with Bid({ instead.
         bid.designer = designer;
+        bid.customer = msg.sender;
         bid.productId = productId;
         bid.bidWei = bidWei;
         bid.quantity = quantity;
 
-        // Add lookup to product registry
-
-        // Cannot get storage reference to Product struct
-        //ProductRegistry.Product storage product = registry.products[productId];
-        //ProductRegistry.Product storage product = registry.products(productId);
-        //ProductRegistry.Product storage product = registry.getProductAtId(productId);
-
-        //ProductRegistry.ProductBid storage productBid = product.productBids[product.numBids++];
-        //productBid.customer = msg.sender;
-        //productBid.bidId = customer.numBids;
-
-        // Increment customer bid count
-        customer.numBids++;
-
-        // Todo - this function needs testing
-    */
+        nextBidId++;
 
         // Would be even better to emit events when bids are placed and removed
         // to make it easier for folks to monitor execution conditions without
@@ -420,27 +408,25 @@ contract SupplyChain {
     }
 
     function removeBid(uint bidId) public {
-        Customer storage customer = customers[msg.sender];
 
-        //Bid storage bid = customer.bids[bidId];
-        //delete bid; // cannot apply delete to storage pointer
+        // Note index in array to delete
+        uint indexToDelete = bids[bidId].bidArrayIndex;
+        // Grab ID at last index
+        uint bidIdToFillArrayHole = bidArray[bidArray.length - 1];
+        // Overwrite id at deleted index
+        bidArray[indexToDelete] = bidIdToFillArrayHole;
+        // Make sure struct in mapping points back to array
+        bids[bidIdToFillArrayHole].bidArrayIndex = indexToDelete;
+        // Remove last array element
+        bidArray.length--;
 
-        // Questionable deletion of bid from array
-        // Probably want a different data structure
-        //delete customer.bids[bidId];
-
-        // Todo - There is a current flaw in product registry customer bid
-        // That needs a better data structure to support deletion.
+        delete bids[bidId];
 
         // Todo - This requires more testing
     }
 
-    // These will work as long as long as placeBid is called in the same transaction.
-    function getNextBidId() public view returns (uint) {
-        return customers[msg.sender].numBids;
-    }
     function getPreviousBidId() public view returns (uint) {
-        return customers[msg.sender].numBids - 1; // underflow if numBids = 0;
+        return customers[msg.sender].previousBidId;
     }
 
     function depositFunds() public payable {
@@ -455,18 +441,13 @@ contract SupplyChain {
         customers[msg.sender].fundsWei = 0;
     }
 
+    function getBid(uint bidId) public view returns (Bid memory) {
+        return bids[bidId];
+    }
 
     function getNumBids() public view returns (uint) {
-        return customers[msg.sender].numBids;
+        return bidArray.length;
     }
-
-    function getBid(uint bidIndex) public view returns (Bid memory) {
-        require(customers[msg.sender].numBids > bidIndex, "Bid index out of range");
-        return customers[msg.sender].bids[bidIndex];
-    }
-
-    // Also tracking bids on a per-designer-product level for easier scanning.
-    // Tracking these within each product
 
 
     /*
