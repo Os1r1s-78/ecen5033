@@ -95,7 +95,7 @@ contract SupplyChain {
 
     struct Inventory {
         uint numItems; // this will act as an ID.
-        uint dummy;
+        bool available;
         mapping (uint => Item) items;
     }
 
@@ -103,11 +103,10 @@ contract SupplyChain {
     // Notes on working with mapping of contracts:
     // https://ethereum.stackexchange.com/questions/32354/mapping-to-contract
     mapping (address => Inventory) public inventories;
-    mapping (address => bool) public inventoryAvailable;
 
     function addItem(uint quantity, bytes32 description, PriceStruct[] memory priceArray) public {
-        if (!inventoryAvailable[msg.sender]) {
-            inventoryAvailable[msg.sender] = true;
+        if (!inventories[msg.sender].available) {
+            inventories[msg.sender].available = true;
             // Unnecessary now that we're using structs instead of contracts
             //inventories[msg.sender] = new Inventory();
         }
@@ -128,7 +127,7 @@ contract SupplyChain {
 
     // Cannot return values from non-pure/view functions, so can't get ID from addItem call.
     function getNextItemId() public view returns (uint) {
-        if (inventoryAvailable[msg.sender]) {
+        if (inventories[msg.sender].available) {
             return inventories[msg.sender].numItems;
         } else {
             return 0; // Next id will be zero if inventory does not exist yet
@@ -136,7 +135,7 @@ contract SupplyChain {
     }
 
     function getPreviousItemId() public view returns (uint) {
-        if (inventoryAvailable[msg.sender] && inventories[msg.sender].numItems != 0) {
+        if (inventories[msg.sender].available && inventories[msg.sender].numItems != 0) {
             return inventories[msg.sender].numItems - 1;
         } else {
             return ~uint(0); // largest uint
@@ -144,7 +143,7 @@ contract SupplyChain {
     }
 
     function replaceQuantity(uint itemId, uint newQuantity) public {
-        require(inventoryAvailable[msg.sender], "Inventory not available");
+        require(inventories[msg.sender].available, "Inventory not available");
         inventories[msg.sender].items[itemId].quantityAvailable = newQuantity;
     }
 
@@ -157,17 +156,17 @@ contract SupplyChain {
     }
     */
     function incrementQuantity(uint itemId, uint increment) public {
-        require(inventoryAvailable[msg.sender], "Inventory not available");
+        require(inventories[msg.sender].available, "Inventory not available");
         inventories[msg.sender].items[itemId].quantityAvailable += increment;
     }
     function decrementQuantity(uint itemId, uint decrement) public {
-        require(inventoryAvailable[msg.sender], "Inventory not available");
+        require(inventories[msg.sender].available, "Inventory not available");
         inventories[msg.sender].items[itemId].quantityAvailable -= decrement;
     }
 
 
     function replacePrices(uint itemId, PriceStruct[] memory priceArray) public {
-        require(inventoryAvailable[msg.sender], "Inventory not available");
+        require(inventories[msg.sender].available, "Inventory not available");
 
         // Helper references to save typing
         Inventory storage inventory = inventories[msg.sender];
@@ -200,7 +199,7 @@ contract SupplyChain {
     // getItem and getPriceStruct are required, since there is not other way to access this data
 
     function getNumItems() public view returns (uint) {
-        if (inventoryAvailable[msg.sender]) {
+        if (inventories[msg.sender].available) {
             return inventories[msg.sender].numItems;
         } else {
             return 0; // Zero items if inventory does not exist yet
@@ -208,12 +207,12 @@ contract SupplyChain {
     }
 
     function getItem(uint itemId) public view returns (Item memory){
-        require(inventoryAvailable[msg.sender], "Inventory not available");
+        require(inventories[msg.sender].available, "Inventory not available");
         return inventories[msg.sender].items[itemId];
     }
 
     function getPriceStruct(uint itemId, uint priceStructIndex) public view returns (PriceStruct memory){
-        require(inventoryAvailable[msg.sender], "Inventory not available");
+        require(inventories[msg.sender].available, "Inventory not available");
         return inventories[msg.sender].items[itemId].prices[priceStructIndex];
     }
 
@@ -254,29 +253,25 @@ contract SupplyChain {
         // For now, just going to set customer address to zero for inactive bids
         uint numBids;
         // Num bids unnecessary, since that is just bids array length
-        uint dummy;
+        bool available;
     }
 
     struct ProductRegistry {
         uint numProducts; // acts as ID
-        uint dummy;
+        bool available;
         mapping (uint => Product) products;
-        mapping (uint => bool) productAvailable; // Likely need this
-        // Todo, probably better to add an "available" field within each struct, rather than use separate mapping
     }
 
     // Designer product registries tied to their owner address
     mapping (address => ProductRegistry) public productRegistries;
-    mapping (address => bool) public productRegistryAvailable;
-
 
     function addProduct(Part[] memory partsArray) public {
-        if (!productRegistryAvailable[msg.sender]) {
-            productRegistryAvailable[msg.sender] = true;
+        if (!productRegistries[msg.sender].available) {
+            productRegistries[msg.sender].available = true;
         }
 
         ProductRegistry storage registry = productRegistries[msg.sender];
-        registry.productAvailable[registry.numProducts] = true;
+        registry.products[registry.numProducts].available = true;
 
         Part[] storage newProduct = registry.products[registry.numProducts++].partsArray;
 
@@ -288,24 +283,26 @@ contract SupplyChain {
     }
 
     function removeProduct(uint productId) public {
-        require(productRegistryAvailable[msg.sender], "Product registry not available");
+        require(productRegistries[msg.sender].available, "Product registry not available");
 
         ProductRegistry storage registry = productRegistries[msg.sender];
 
         delete registry.products[productId];
-        registry.productAvailable[productId] = false;
+        //registry.products[productId].available = false;
     }
 
     function getNextProductId() public view returns (uint) {
-        if (productRegistryAvailable[msg.sender]) {
+        if (productRegistries[msg.sender].available) {
             return productRegistries[msg.sender].numProducts;
         } else {
             return 0; // Next id will be zero if registry does not exist yet
         }
+        // Todo, could likely replace entire body with below due to zero default
+        //return productRegistries[msg.sender].numProducts;
     }
 
     function getPreviousProductId() public view returns (uint) {
-        if (productRegistryAvailable[msg.sender] && productRegistries[msg.sender].numProducts != 0) {
+        if (productRegistries[msg.sender].available && productRegistries[msg.sender].numProducts != 0) {
             return productRegistries[msg.sender].numProducts - 1;
         } else {
             return ~uint(0); // largest uint
@@ -317,8 +314,9 @@ contract SupplyChain {
     // getProduct, getProductPart, and getProductBid are required,
     // since there is not other way to access this data.
 
+    // This function is identical to getNextProductId
     function getNumProducts() public view returns (uint) {
-        if (productRegistryAvailable[msg.sender]) {
+        if (productRegistries[msg.sender].available) {
             return productRegistries[msg.sender].numProducts;
         } else {
             return 0; // Zero items if product registry does not exist yet
@@ -331,17 +329,17 @@ contract SupplyChain {
     //}
 
     function getProduct(uint productId) public view returns (Product memory) {
-        require(productRegistryAvailable[msg.sender], "Product Registry not available");
+        require(productRegistries[msg.sender].available, "Product Registry not available");
         return productRegistries[msg.sender].products[productId];
     }
 
     function getProductPart(uint productId, uint partIndex) public view returns (Part memory) {
-        require(productRegistryAvailable[msg.sender], "Product Registry not available");
+        require(productRegistries[msg.sender].available, "Product Registry not available");
         return productRegistries[msg.sender].products[productId].partsArray[partIndex];
     }
 
     function getProductBid(uint productId, uint bidIndex) public view returns (ProductBid memory) {
-        require(productRegistryAvailable[msg.sender], "Product Registry not available");
+        require(productRegistries[msg.sender].available, "Product Registry not available");
         return productRegistries[msg.sender].products[productId].productBids[bidIndex];
     }
 
@@ -370,9 +368,9 @@ contract SupplyChain {
 
     function placeBid(address designer, uint productId, uint bidWei, uint quantity) public {
         // Ensure that product is available
-        require(productRegistryAvailable[designer], "Product registry not available for designer");
+        require(productRegistries[designer].available, "Product registry not available for designer");
         ProductRegistry storage registry = productRegistries[designer];
-        require(registry.productAvailable[productId], "Product not available in registry");
+        require(registry.products[productId].available, "Product not available in registry");
 
         // Double-check if uninitialized mapping can be accessed like this.
         Customer storage customer = customers[msg.sender];
