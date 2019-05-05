@@ -160,32 +160,33 @@ contract SupplyChain {
     }
 
     struct Part {
-        PART_TYPE part_type;
-        // If part is item, then manufacturer_ID is supplier address
-        // If part is product, then manufacturer_ID is designer address
-        address manufacturer_ID;
+        PART_TYPE partType;
+        // If part is item, then manufacturerId is supplier address
+        // If part is product, then manufacturerId is designer address
+        address manufacturerId;
 
         //bytes32 hashedDescription;
-        // If part is an item, part_ID should be the item_id in the
+        // If part is an item, partId should be the item_id in the
         // manufacturer's inventory.
-        // If part is a product, part_ID should be the product_ID
-        uint part_ID;
+        // If part is a product, partId should be the product_ID
+        uint partId;
         uint quantity;
     }
 
     // This is a way to track all customer bids for each product
-    struct ProductBid {
-        address customer;
-        uint bidId;
-    }
+    // Not tracking bids in products anymore
+    //struct ProductBid {
+    //    address customer;
+    //    uint bidId;
+    //}
 
     struct Product {
         Part[] partsArray;
         // Bids needs to be another data structure that supports deletion.
         // Singly-linked list would work.
-        ProductBid[] productBids;
+        //ProductBid[] productBids;
         // For now, just going to set customer address to zero for inactive bids
-        uint numBids;
+        //uint numBids;
         // Num bids unnecessary, since that is just bids array length
         bool available;
     }
@@ -272,10 +273,10 @@ contract SupplyChain {
         return productRegistries[msg.sender].products[productId].partsArray[partIndex];
     }
 
-    function getProductBid(uint productId, uint bidIndex) public view returns (ProductBid memory) {
-        require(productRegistries[msg.sender].available, "Product Registry not available");
-        return productRegistries[msg.sender].products[productId].productBids[bidIndex];
-    }
+    //function getProductBid(uint productId, uint bidIndex) public view returns (ProductBid memory) {
+    //    require(productRegistries[msg.sender].available, "Product Registry not available");
+    //    return productRegistries[msg.sender].products[productId].productBids[bidIndex];
+    //}
 
     // ---------- Bids section --------------
 
@@ -382,6 +383,105 @@ contract SupplyChain {
         return bidArray.length;
     }
 
+    struct ItemTallyElement {
+        uint quantity;
+        // Todo, this requires a refactor to strip out manufacturer
+        // Cannot use a single mapping with manufacturer included
+        uint itemArrayIndex;
+    }
+
+    function tallyProducts(address designer, uint productId, uint quantity,
+    mapping (uint => ItemTallyElement) storage itemTally, uint[] memory itemTallyList) private {
+        // Ensure that product is available
+        ProductRegistry storage registry = productRegistries[designer];
+        require(registry.available, "Product registry not available for designer");
+        Product storage product = registry.products[productId];
+        require(product.available, "Product not available in registry");
+
+        // Iterate over all parts
+        for (uint i = 0; i < product.partsArray.length; i++) {
+            Part storage part = product.partsArray[i];
+            if (part.quantity == 0) {
+                // Skip zero quantity parts
+                continue;
+            }
+            if (part.partType == PART_TYPE.PRODUCT) {
+                // Recurse into sub product
+                tallyProducts(part.manufacturerId, part.partId, part.quantity * quantity, itemTally, itemTallyList);
+            } else if (part.partType == PART_TYPE.ITEM) {
+                // Base case. Tally items
+
+                // Assuming refactored to manufacturerless unique itemIds
+
+                ItemTallyElement storage itemElement = itemTally[part.partId];
+                // Non-zero quantity is a good way to check for whether item needs to be added to array
+                if (itemElement.quantity == 0) {
+                    itemElement.itemArrayIndex = itemTallyList.length;
+                    // Need to troubleshoot: Member "push" is not available in uint256[] memory outside of storage.
+                    //itemTallyList.push(part.partId);
+                }
+                uint quantityConsumed = quantity * part.quantity;
+                itemElement.quantity += quantityConsumed;
+                // Good place to reduce inventory for consumed items
+                Item storage inventoryItem = inventories[designer].items[part.partId];
+                require (inventoryItem.quantityAvailable >= quantityConsumed, "Not enough item quantity" );
+                inventoryItem.quantityAvailable -= quantityConsumed;
+            }
+        }
+    }
+
+    function execute(uint[] memory bidIdArray, uint weiPerEthReward) public {
+        // Total item count tracking by Item ID
+        // Seems like memory would be the best place to keep this mapping,
+        // but that cannot be done
+        // https://ethereum.stackexchange.com/questions/25282/why-conceptually-cant-mappings-be-local-variables
+        // Another error to troubleshoot:
+        // Uninitialized mapping. Mappings cannot be created dynamically, you have to assign them from a state variable.
+        /*
+        mapping (uint => ItemTallyElement) storage itemTally;
+        uint[] memory itemTallyList;
+
+        // Item count per item per customer by customer ID
+        // Actually just track total price here
+
+        //Pass 1
+        //    For all bids
+        //        Tally item quantities
+        //        Both per-item and per-customer-item
+
+        for (uint i = 0; i < bidIdArray.length; i++) {
+            Bid storage bid = bids[bidIdArray[i]];
+            // recurse into product tree
+            tallyProducts(bid.designer, bid.productId, bid.quantity, itemTally, itemTallyList);
+
+            // Todo - Also tally on a per-customer level. Could be done inside of recursive function
+        }
+        */
+
+        //Pass 2
+        //    For all customers
+        //        For all customer items
+        //            Tally total cost
+        //        Require (tally (including reward) >= total customer bid)
+        //        Debit customer balance
+
+        //Pass 3
+        //    For all items
+        //        Tally manufacturer payments
+        //        This must be done after pass 1, which determines quantity and price breaks.
+        //        Could include this step with pass 2, but that is probably less efficient.
+
+        //Pass 4
+        //    For all manufacturers
+        //        Transfer payments.
+        //        Could also transfer payments in smaller pieces in earlier step, but that is less efficient.
+        //        Another option is to treat manufacturers as a customer / user and let them withdraw.
+
+        //Step 5
+        //    Transfer reward to executor.
+        //    Or just increment their balance, and let them withdraw later.
+
+    }
 
     /*
     Next Steps:
@@ -393,7 +493,7 @@ contract SupplyChain {
 
     Get metamask setup with human-readable account names that match ganache.
 
-    Make website more meaningful. Link with actual code.
+    Make website more meaningful.
     Possible to populate website with web3.js test code? Likely.
 
     Show visualization of price curve.
@@ -404,51 +504,6 @@ contract SupplyChain {
 
     Deploy on testnet? This may be slow.
 
-    */
-
-    /**
-    bidsContract parameter may not be required here
-    execution will happen for a particaular product
-    by this function being called by the executioner
-
-    run through all bids for this product
-    check if the customer has funds in their account for the
-    amount they bid
-    if yes pay to contract
-    remove bid
-    then run through the design contract of the product
-    and pay all vendors
-     */
-
-    /* Need to rework this
-    function execute(address bidsAddress, uint productId)  public {
-        CustomerBids bidsContract = CustomerBids(bidsAddress);
-        uint bids_num = bidsContract.getNextBidId();
-        // how is above different from
-        //bidsAddress.call(abi.encodeWithSignature("getNextBidId()"));
-
-        bool errorFlag = false;
-        uint productNum = 0;
-
-        for(uint i=0;i<bidsContract.numBids();i++) {
-            if(bidsContract.bids[i].productId = productId ) {
-                errorFlag = true;
-                require(bidsContract.bids[i].customerAddress.fundsWei >
-                        bidsContract.bids[i].bidWei,"Not enough funds");
-                bidsContract.bids[i].customerAddress.balance -= bidsContract.bids[i].bidWei;
-                bidsContract.removeBid(i);
-                errorFlag = false;
-                productNum++;
-            }
-        }
-
-        // Needs to be checked, whole execute should be reverted when
-        // customer with bid does not have enough funds for the item
-        if(errorFlag)
-            revert();
-
-        // Each vendor needs to be paid productNum * itemPrice
-    }
     */
 
     function createHash(string memory data)

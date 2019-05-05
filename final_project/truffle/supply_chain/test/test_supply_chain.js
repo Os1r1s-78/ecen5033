@@ -1,5 +1,20 @@
 const SupplyChain = artifacts.require("SupplyChain");
 
+// BigNumber is bugged
+// https://stackoverflow.com/questions/54604859/calling-web3-utils-bn-add-gives-error-cannot-create-property-negative-on-numb
+
+// Web3 also needs an update from the current v1.0.0-beta.37
+// But afraid to do that so close to in-class demo.
+// https://github.com/ethereum/web3.js/issues/2077
+
+//var BigNumber = require("bignumber.js");
+//const weiCent = web3.utils.toBN(5E13); // 5E13 Wei per $ cent @ $200 per ETH
+//const weiCent = 5E13; // 5E13 Wei per $ cent @ $200 per ETH
+const weiCent = 1; // just using tiny units for now, although insignificant compared to gas
+const weiDollar = 100 * weiCent;
+//const weiDollar2 = weiCent.mul(100);
+//const weiDollar3 = weiCent.add(100);
+
 async function log_accounts(accounts, n)
 {
   for (let i = 0; i < n; i++) {
@@ -7,7 +22,6 @@ async function log_accounts(accounts, n)
     console.log("account[" + i + "] " + ethbal);
   }
 }
-
 
 contract('SupplyChain', (accounts) => {
   it('should pass Inventory trivial test', async () => {
@@ -119,15 +133,15 @@ contract('SupplyChain', (accounts) => {
 
     var parts_array = [];
     parts_array.push({
-      part_type: 1,
-      manufacturer_ID: accounts[2],
-      part_ID: 3,
+      partType: 1,
+      manufacturerId: accounts[2],
+      partId: 3,
       quantity: 4
     });
     parts_array.push({
-      part_type: 1,
-      manufacturer_ID: accounts[3],
-      part_ID: 4,
+      partType: 1,
+      manufacturerId: accounts[3],
+      partId: 4,
       quantity: 4
     });
 
@@ -143,9 +157,9 @@ contract('SupplyChain', (accounts) => {
     for (i = 0; i < parts_array.length; i++) {
       const product_part = await instance.getProductPart(prevProductId, i);
 
-      assert.equal(product_part.part_type, parts_array[i].part_type, "unexpected part_type");
-      assert.equal(product_part.manufacturer_ID, parts_array[i].manufacturer_ID, "unexpected manufacturer_ID");
-      assert.equal(product_part.part_ID, parts_array[i].part_ID, "unexpected part_ID");
+      assert.equal(product_part.partType, parts_array[i].partType, "unexpected partType");
+      assert.equal(product_part.manufacturerId, parts_array[i].manufacturerId, "unexpected manufacturerId");
+      assert.equal(product_part.partId, parts_array[i].partId, "unexpected partId");
       assert.equal(product_part.quantity, parts_array[i].quantity, "unexpected quantity");
     }
 
@@ -170,9 +184,9 @@ contract('SupplyChain', (accounts) => {
     // May only bid on products in registry, so must set one of those up first
     var parts_array = [];
     parts_array.push({
-      part_type: 1,
-      manufacturer_ID: accounts[2],
-      part_ID: 3,
+      partType: 1,
+      manufacturerId: accounts[2],
+      partId: 3,
       quantity: 4
     });
     await instance.addProduct(parts_array, {from: designer});
@@ -220,9 +234,9 @@ contract('SupplyChain', (accounts) => {
     // May only bid on products in registry, so must set one of those up first
     var parts_array = [];
     parts_array.push({
-      part_type: 1,
-      manufacturer_ID: accounts[2],
-      part_ID: 3,
+      partType: 1,
+      manufacturerId: accounts[2],
+      partId: 3,
       quantity: 4
     });
 
@@ -230,7 +244,7 @@ contract('SupplyChain', (accounts) => {
     var bid_array = [];
 
     for (var i = 10; i < 15; i++) {
-      parts_array[0].part_ID = i;
+      parts_array[0].partId = i;
       await instance.addProduct(parts_array, { from: designer });
       const productId = await instance.getPreviousProductId({ from: designer });
 
@@ -392,6 +406,9 @@ contract('SupplyChain', (accounts) => {
     const customer2 = accounts[8];
     const customer3 = accounts[9];
 
+    // Let executor also be the designer
+    const executor = kbDesigner;
+
     // ---------- Supplier phase
 
     // add keycaps
@@ -399,9 +416,10 @@ contract('SupplyChain', (accounts) => {
     const keycapHashedDesc = await instance.createHash(keycapDesc);
     const keycapQuantity = 50000;
     var keycapPriceArray = [];
-    keycapPriceArray.push({ quantity: 1, priceWei: 10 });
-    keycapPriceArray.push({ quantity: 100, priceWei: 8 });
-    keycapPriceArray.push({ quantity: 10000, priceWei: 5 });
+    keycapPriceArray.push({ quantity: 1, priceWei: 100 * weiCent });
+    //keycapPriceArray.push({ quantity: 1, priceWei: web3.utils.toBN(100 * weiCent) });
+    keycapPriceArray.push({ quantity: 100, priceWei: 80 * weiCent });
+    keycapPriceArray.push({ quantity: 10000, priceWei: 50 * weiCent });
 
     await instance.addItem(
       keycapQuantity,
@@ -420,9 +438,9 @@ contract('SupplyChain', (accounts) => {
     const switchHashedDesc = await instance.createHash(switchDesc);
     const switchQuantity = 10000;
     var switchPriceArray = [];
-    switchPriceArray.push({ quantity: 1, priceWei: 500 });
-    switchPriceArray.push({ quantity: 100, priceWei: 400 });
-    switchPriceArray.push({ quantity: 10000, priceWei: 250 });
+    switchPriceArray.push({ quantity: 1, priceWei: 50 * weiCent });
+    switchPriceArray.push({ quantity: 100, priceWei: 40 * weiCent });
+    switchPriceArray.push({ quantity: 10000, priceWei: 25 * weiCent });
 
     await instance.addItem(
       switchQuantity,
@@ -440,9 +458,9 @@ contract('SupplyChain', (accounts) => {
     const diodeHashedDesc = await instance.createHash(diodeDesc);
     const diodeQuantity = 30000;
     var diodePriceArray = [];
-    diodePriceArray.push({ quantity: 1, priceWei: 1000 });
-    diodePriceArray.push({ quantity: 25, priceWei: 500 });
-    diodePriceArray.push({ quantity: 500, priceWei: 300 });
+    diodePriceArray.push({ quantity: 1, priceWei: 10 * weiCent });
+    diodePriceArray.push({ quantity: 25, priceWei: 5 * weiCent });
+    diodePriceArray.push({ quantity: 500, priceWei: 3 * weiCent });
 
     await instance.addItem(
       diodeQuantity,
@@ -460,10 +478,10 @@ contract('SupplyChain', (accounts) => {
     const pcbHashedDesc = await instance.createHash(pcbDesc);
     const pcbQuantity = 400;
     var pcbPriceArray = [];
-    pcbPriceArray.push({ quantity: 1, priceWei: 100000 });
-    pcbPriceArray.push({ quantity: 5, priceWei: 50000 });
-    pcbPriceArray.push({ quantity: 10, priceWei: 20000 });
-    pcbPriceArray.push({ quantity: 25, priceWei: 10000 });
+    pcbPriceArray.push({ quantity: 1, priceWei: 100 * weiDollar });
+    pcbPriceArray.push({ quantity: 5, priceWei: 50 * weiDollar });
+    pcbPriceArray.push({ quantity: 10, priceWei: 20 * weiDollar });
+    pcbPriceArray.push({ quantity: 25, priceWei: 10 * weiDollar });
 
     await instance.addItem(
       pcbQuantity,
@@ -481,9 +499,10 @@ contract('SupplyChain', (accounts) => {
     const enclosureHashedDesc = await instance.createHash(enclosureDesc);
     const enclosureQuantity = 300;
     var enclosurePriceArray = [];
-    enclosurePriceArray.push({ quantity: 5, priceWei: 10000 });
-    enclosurePriceArray.push({ quantity: 25, priceWei: 6000 });
-    enclosurePriceArray.push({ quantity: 100, priceWei: 3000 });
+    enclosurePriceArray.push({ quantity: 1, priceWei: 200 * weiDollar });
+    enclosurePriceArray.push({ quantity: 5, priceWei: 100 * weiDollar });
+    enclosurePriceArray.push({ quantity: 25, priceWei: 60 * weiDollar });
+    enclosurePriceArray.push({ quantity: 100, priceWei: 30 * weiDollar });
 
     await instance.addItem(
       enclosureQuantity,
@@ -513,33 +532,33 @@ contract('SupplyChain', (accounts) => {
 
     var kbPartsArray = [];
     kbPartsArray.push({
-      part_type: PartType.ITEM,
-      manufacturer_ID: kbAccessoriesCo,
-      part_ID: keycapId.toNumber(), // Convert from BN
+      partType: PartType.ITEM,
+      manufacturerId: kbAccessoriesCo,
+      partId: keycapId.toNumber(), // Convert from BN
       quantity: 75
     });
     kbPartsArray.push({
-      part_type: PartType.ITEM,
-      manufacturer_ID: kbAccessoriesCo,
-      part_ID: switchId.toNumber(),
+      partType: PartType.ITEM,
+      manufacturerId: kbAccessoriesCo,
+      partId: switchId.toNumber(),
       quantity: 75
     });
     kbPartsArray.push({
-      part_type: PartType.ITEM,
-      manufacturer_ID: miscElectronicsCo,
-      part_ID: diodeId.toNumber(),
+      partType: PartType.ITEM,
+      manufacturerId: miscElectronicsCo,
+      partId: diodeId.toNumber(),
       quantity: 75
     });
     kbPartsArray.push({
-      part_type: PartType.ITEM,
-      manufacturer_ID: pcbFabCo,
-      part_ID: pcbId.toNumber(),
+      partType: PartType.ITEM,
+      manufacturerId: pcbFabCo,
+      partId: pcbId.toNumber(),
       quantity: 1
     });
     kbPartsArray.push({
-      part_type: PartType.ITEM,
-      manufacturer_ID: plasticsCo,
-      part_ID: enclosureId.toNumber(),
+      partType: PartType.ITEM,
+      manufacturerId: plasticsCo,
+      partId: enclosureId.toNumber(),
       quantity: 1
     });
 
@@ -554,7 +573,8 @@ contract('SupplyChain', (accounts) => {
     async function setupShipping(customer_address) {
       const shippingHashedDesc = await instance.createHash(customer_address);
       // Generate a random-ish price based on the address
-      const price = shippingHashedDesc[0] * 10000;
+      // Ranges from $2 - $~12
+      const price = shippingHashedDesc[0] * 4 * weiCent + 2 * weiDollar;
       const shippingQuantity = 1;
       var shippingPriceArray = [];
       shippingPriceArray.push({ quantity: 1, priceWei: price });
@@ -573,9 +593,9 @@ contract('SupplyChain', (accounts) => {
     // Customer 1 wants a single kb
     var shippedKbC1PartsArray = [];
     shippedKbC1PartsArray.push({
-      part_type: PartType.PRODUCT,
-      manufacturer_ID: kbDesigner,
-      part_ID: kbProductId.toNumber(),
+      partType: PartType.PRODUCT,
+      manufacturerId: kbDesigner,
+      partId: kbProductId.toNumber(),
       quantity: 1
     });
 
@@ -583,21 +603,22 @@ contract('SupplyChain', (accounts) => {
     assert.equal(shippingC1Id, 0, "unexpected shippingC1Id");
 
     shippedKbC1PartsArray.push({
-      part_type: PartType.ITEM,
-      manufacturer_ID: shippingCo,
-      part_ID: shippingC1Id.toNumber(),
+      partType: PartType.ITEM,
+      manufacturerId: shippingCo,
+      partId: shippingC1Id.toNumber(),
       quantity: 1
     });
 
     await instance.addProduct(shippedKbC1PartsArray, {from: customer1});
     const shippedKbC1ProductId = await instance.getPreviousProductId({from: customer1});
+    const c1BidId = await instance.placeBid(customer1, shippedKbC1ProductId, 300 * weiDollar, 1, {from: customer1});
 
     // Customer 2 wants five KBs
     var shippedKbC2PartsArray = [];
     shippedKbC2PartsArray.push({
-      part_type: PartType.PRODUCT,
-      manufacturer_ID: kbDesigner,
-      part_ID: kbProductId.toNumber(),
+      partType: PartType.PRODUCT,
+      manufacturerId: kbDesigner,
+      partId: kbProductId.toNumber(),
       quantity: 5
     });
 
@@ -605,22 +626,22 @@ contract('SupplyChain', (accounts) => {
     assert.equal(shippingC2Id, 1, "unexpected shippingC2Id");
 
     shippedKbC2PartsArray.push({
-      part_type: PartType.ITEM,
-      manufacturer_ID: shippingCo,
-      part_ID: shippingC2Id.toNumber(),
+      partType: PartType.ITEM,
+      manufacturerId: shippingCo,
+      partId: shippingC2Id.toNumber(),
       quantity: 1
     });
 
     await instance.addProduct(shippedKbC2PartsArray, {from: customer2});
     const shippedKbC2ProductId = await instance.getPreviousProductId({from: customer2});
-
+    const c2BidId = await instance.placeBid(customer2, shippedKbC2ProductId, 300 * weiDollar, 1, {from: customer2});
 
     // Customer 3 wants a single kb
     var shippedKbC3PartsArray = [];
     shippedKbC3PartsArray.push({
-      part_type: PartType.PRODUCT,
-      manufacturer_ID: kbDesigner,
-      part_ID: kbProductId.toNumber(),
+      partType: PartType.PRODUCT,
+      manufacturerId: kbDesigner,
+      partId: kbProductId.toNumber(),
       quantity: 1
     });
 
@@ -628,13 +649,27 @@ contract('SupplyChain', (accounts) => {
     assert.equal(shippingC3Id, 2, "unexpected shippingC3Id");
 
     shippedKbC3PartsArray.push({
-      part_type: PartType.ITEM,
-      manufacturer_ID: shippingCo,
-      part_ID: shippingC3Id.toNumber(),
+      partType: PartType.ITEM,
+      manufacturerId: shippingCo,
+      partId: shippingC3Id.toNumber(),
       quantity: 1
     });
 
     await instance.addProduct(shippedKbC3PartsArray, {from: customer3});
     const shippedKbC3ProductId = await instance.getPreviousProductId({from: customer3});
+    const c3BidId = await instance.placeBid(customer3, shippedKbC3ProductId, 300 * weiDollar, 1, {from: customer3});
+
+    var bidsToExecuteArray = [];
+    bidsToExecuteArray.push(c1BidId);
+    bidsToExecuteArray.push(c2BidId);
+    bidsToExecuteArray.push(c3BidId);
+
+    // No requested reward
+    // But could request 1% with 1E16 weiPerEthreward
+    instance.execute(bidsToExecuteArray, 0, {from: executor});
+
+    // Todo - analyze transfer of funds, although this is blocked by lack of big number support.
+    // Todo - analyze final quantities
+
   });
 });
