@@ -251,7 +251,9 @@ contract SupplyChain {
         // Bids needs to be another data structure that supports deletion.
         // Singly-linked list would work.
         ProductBid[] productBids;
+        // For now, just going to set customer address to zero for inactive bids
         uint numBids;
+        // Num bids unnecessary, since that is just bids array length
         uint dummy;
     }
 
@@ -260,6 +262,7 @@ contract SupplyChain {
         uint dummy;
         mapping (uint => Product) products;
         mapping (uint => bool) productAvailable; // Likely need this
+        // Todo, probably better to add an "available" field within each struct, rather than use separate mapping
     }
 
     // Designer product registries tied to their owner address
@@ -279,6 +282,7 @@ contract SupplyChain {
 
         // Copy partsArray into newProduct
         for (uint i = 0; i < partsArray.length; i++) {
+            // Todo, should add checks to ensure the part ID exists for the manufacturer
             newProduct.push(partsArray[i]);
         }
     }
@@ -321,6 +325,11 @@ contract SupplyChain {
         }
     }
 
+    // This will probably work fine too, since defaults to zero
+    //function getNumProducts() public view returns (uint) {
+    //    return productRegistries[msg.sender].numProducts;
+    //}
+
     function getProduct(uint productId) public view returns (Product memory) {
         require(productRegistryAvailable[msg.sender], "Product Registry not available");
         return productRegistries[msg.sender].products[productId];
@@ -336,6 +345,7 @@ contract SupplyChain {
         return productRegistries[msg.sender].products[productId].productBids[bidIndex];
     }
 
+    // ---------- Bids section --------------
 
     /*
     May only bid on products, not items.
@@ -368,7 +378,19 @@ contract SupplyChain {
         Customer storage customer = customers[msg.sender];
 
         // Get next bid
-        Bid storage bid = customer.bids[customer.numBids];
+        // Attempting to access empty bids array here. Need to push bid into this array instead.
+        // Bid storage bid = customer.bids[customer.numBids];
+
+        /*
+        Requirements of ideal data structure for tracking bids:
+        No need to scan through all customer bids.
+        Only really need to scan through product bids.
+        Need to lookup bid by reference.
+
+        Might be best to just track single large list of bids.
+        Can re-scan list to identify all bids associated with a customer or product.
+        */
+    /*
 
         // Copy all values
         // Might need to create struct instance with Bid({ instead.
@@ -392,6 +414,11 @@ contract SupplyChain {
         customer.numBids++;
 
         // Todo - this function needs testing
+    */
+
+        // Would be even better to emit events when bids are placed and removed
+        // to make it easier for folks to monitor execution conditions without
+        // having to re-scan bid list every time.
     }
 
     function removeBid(uint bidId) public {
@@ -399,7 +426,10 @@ contract SupplyChain {
 
         //Bid storage bid = customer.bids[bidId];
         //delete bid; // cannot apply delete to storage pointer
-        delete customer.bids[bidId];
+
+        // Questionable deletion of bid from array
+        // Probably want a different data structure
+        //delete customer.bids[bidId];
 
         // Todo - There is a current flaw in product registry customer bid
         // That needs a better data structure to support deletion.
@@ -425,6 +455,16 @@ contract SupplyChain {
         msg.sender.transfer(customers[msg.sender].fundsWei);
         // Reset balance to zero
         customers[msg.sender].fundsWei = 0;
+    }
+
+
+    function getNumBids() public view returns (uint) {
+        return customers[msg.sender].numBids;
+    }
+
+    function getBid(uint bidIndex) public view returns (Bid memory) {
+        require(customers[msg.sender].numBids > bidIndex, "Bid index out of range");
+        return customers[msg.sender].bids[bidIndex];
     }
 
     // Also tracking bids on a per-designer-product level for easier scanning.

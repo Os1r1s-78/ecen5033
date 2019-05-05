@@ -127,13 +127,13 @@ contract('SupplyChain', (accounts) => {
     var parts_array = [];
     parts_array.push({
       part_type: 1,
-      manufacturer_ID: '0x00a329c0648769A73afAc7F9381E08FB43dBEA72',
+      manufacturer_ID: accounts[2],
       part_ID: 3,
       quantity: 4
     });
     parts_array.push({
       part_type: 1,
-      manufacturer_ID: '0x00a329c0648769A73afAc7F9381E08FB43dBEA72',
+      manufacturer_ID: accounts[3],
       part_ID: 4,
       quantity: 4
     });
@@ -158,8 +158,8 @@ contract('SupplyChain', (accounts) => {
 
   });
 });
-/*
 
+/*
 
 // Old test
 contract('CustomerBids', (accounts) => {
@@ -339,48 +339,66 @@ contract('CustomerBids', (accounts) => {
   });
 
 });
+*/
 
 // New bid test
 contract('SupplyChain', (accounts) => {
 
   it('should start with 0 bids', async () => {
-    const supplyInstance = await SupplyChain.deployed();
+    const instance = await SupplyChain.deployed();
 
-    const cbInstance = await CustomerBids.deployed();
-    const initialBids = await cbInstance.numBids();
+    const initialBids = await instance.getNumBids();
 
     assert.equal(initialBids, 0, "some bids already recorded");
   });
 
   it('should be able to place bid', async () => {
-    const cbInstance = await CustomerBids.deployed();
+    const instance = await SupplyChain.deployed();
 
-    const productId = 123;
+    const designer = accounts[1];
+
+    // May only bid on products in registry, so must set one of those up first
+    var parts_array = [];
+    parts_array.push({
+      part_type: 1,
+      manufacturer_ID: accounts[2],
+      part_ID: 3,
+      quantity: 4
+    });
+    await instance.addProduct(parts_array, {from: designer});
+
+    const productId = await instance.getPreviousProductId({from: designer});
     const bidWei = 20;
     const quantity = 2;
 
-    await cbInstance.placeBid(productId, bidWei, quantity);
+    console.log({designer});
+    console.log({productId});
+    await instance.placeBid(designer, productId, bidWei, quantity);
+    /*
 
-    var numBids = await cbInstance.numBids();
+    var numBids = await instance.getNumBids();
     assert.equal(numBids, 1, "something other than just a single bid");
 
-    const bidId = await cbInstance.getPreviousBidId();
+    const bidId = await instance.getPreviousBidId();
 
-    const bid = await cbInstance.bids(bidId);
+    const bid = await instance.bids(bidId);
 
     assert.equal(bid.customerAddress, accounts[0], "bid address mismatch");
+    assert.equal(bid.designer, designer, "bid designer mismatch");
     assert.equal(bid.productId, productId, "bid productId mismatch");
     assert.equal(bid.bidWei, bidWei, "bid wei mismatch");
     assert.equal(bid.quantity, quantity, "bid quantity mismatch");
 
     // Delete bid to clean-up for next test
-    await cbInstance.removeBid(bidId);
+    await instance.removeBid(bidId);
 
     // Note that deleting bid does not reduce numBids
-    var numBids = await cbInstance.numBids();
+    var numBids = await instance.getNumBids();
     //assert.equal(numBids, 0, "some bids remaining");
+    */
   });
 
+  /*
   it('place and delete multiple bids', async () => {
     const cbInstance = await CustomerBids.deployed();
 
@@ -518,9 +536,11 @@ contract('SupplyChain', (accounts) => {
     assert.equal(c2_contract_funds, 0, "c2 contract funds not zeroed");
 
   });
+  */
 
 });
 
+/*
 
 contract('SupplyChain', (accounts) => {
 
