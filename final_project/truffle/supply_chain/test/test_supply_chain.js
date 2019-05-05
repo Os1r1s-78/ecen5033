@@ -1,11 +1,4 @@
 const SupplyChain = artifacts.require("SupplyChain");
-/*
-const Inventory = artifacts.require("Inventory");
-const ProductRegistry = artifacts.require("ProductRegistry");
-const CustomerBids = artifacts.require("CustomerBids");
-const StructMapping = artifacts.require("StructMapping");
-const StructAccess = artifacts.require("StructAccess");
-*/
 
 async function log_accounts(accounts, n)
 {
@@ -645,6 +638,3 @@ contract('SupplyChain', (accounts) => {
     const shippedKbC3ProductId = await instance.getPreviousProductId({from: customer3});
   });
 });
-/*
-
-*/
