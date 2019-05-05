@@ -452,8 +452,6 @@ contract SupplyChain {
 
     /*
     Next Steps:
-    Do some basic testing of new customer and bidding scheme.
-    Should just involve porting over bidding test.
 
     Create a helper function to print out data with human-readable account names.
     For example

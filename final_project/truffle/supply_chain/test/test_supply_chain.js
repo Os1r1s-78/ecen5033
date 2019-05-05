@@ -373,12 +373,10 @@ contract('SupplyChain', (accounts) => {
 
 });
 
-/*
-
 contract('SupplyChain', (accounts) => {
 
   it('should pass real-ish world example', async () => {
-    const supplyInstance = await SupplyChain.deployed();
+    const instance = await SupplyChain.deployed();
 
     const kbAccessoriesCo = accounts[1];
     // keycaps, switches - item
@@ -412,14 +410,14 @@ contract('SupplyChain', (accounts) => {
     keycapPriceArray.push({ quantity: 100, priceWei: 8 });
     keycapPriceArray.push({ quantity: 10000, priceWei: 5 });
 
-    await supplyInstance.addItem(
+    await instance.addItem(
       keycapQuantity,
       keycapHashedDesc,
       keycapPriceArray,
       { from: kbAccessoriesCo }
     );
 
-    keycapId = await supplyInstance.getPreviousItemId({from: kbAccessoriesCo});
+    keycapId = await instance.getPreviousItemId({from: kbAccessoriesCo});
     //keycapId = keycapId.toNumber(); // Need to convert these from BN for use in parts array. toString() may be better.
     assert.equal(keycapId, 0, "unexpected keycapId");
 
@@ -433,14 +431,14 @@ contract('SupplyChain', (accounts) => {
     switchPriceArray.push({ quantity: 100, priceWei: 400 });
     switchPriceArray.push({ quantity: 10000, priceWei: 250 });
 
-    await supplyInstance.addItem(
+    await instance.addItem(
       switchQuantity,
       switchHashedDesc,
       switchPriceArray,
       { from: kbAccessoriesCo }
     );
 
-    const switchId = await supplyInstance.getPreviousItemId({from: kbAccessoriesCo});
+    const switchId = await instance.getPreviousItemId({from: kbAccessoriesCo});
     assert.equal(switchId, 1, "unexpected switchId");
 
 
@@ -453,14 +451,14 @@ contract('SupplyChain', (accounts) => {
     diodePriceArray.push({ quantity: 25, priceWei: 500 });
     diodePriceArray.push({ quantity: 500, priceWei: 300 });
 
-    await supplyInstance.addItem(
+    await instance.addItem(
       diodeQuantity,
       diodeHashedDesc,
       diodePriceArray,
       { from: miscElectronicsCo }
     );
 
-    const diodeId = await supplyInstance.getPreviousItemId({from: miscElectronicsCo});
+    const diodeId = await instance.getPreviousItemId({from: miscElectronicsCo});
     assert.equal(diodeId, 0, "unexpected diodeId");
 
 
@@ -474,14 +472,14 @@ contract('SupplyChain', (accounts) => {
     pcbPriceArray.push({ quantity: 10, priceWei: 20000 });
     pcbPriceArray.push({ quantity: 25, priceWei: 10000 });
 
-    await supplyInstance.addItem(
+    await instance.addItem(
       pcbQuantity,
       pcbHashedDesc,
       pcbPriceArray,
       { from: pcbFabCo }
     );
 
-    const pcbId = await supplyInstance.getPreviousItemId({from: pcbFabCo});
+    const pcbId = await instance.getPreviousItemId({from: pcbFabCo});
     assert.equal(pcbId, 0, "unexpected pcbId");
 
 
@@ -494,14 +492,14 @@ contract('SupplyChain', (accounts) => {
     enclosurePriceArray.push({ quantity: 25, priceWei: 6000 });
     enclosurePriceArray.push({ quantity: 100, priceWei: 3000 });
 
-    await supplyInstance.addItem(
+    await instance.addItem(
       enclosureQuantity,
       enclosureHashedDesc,
       enclosurePriceArray,
       { from: plasticsCo }
     );
 
-    const enclosureId = await supplyInstance.getPreviousItemId({from: plasticsCo});
+    const enclosureId = await instance.getPreviousItemId({from: plasticsCo});
     assert.equal(enclosureId, 0, "unexpected enclosureId");
 
 
@@ -552,8 +550,8 @@ contract('SupplyChain', (accounts) => {
       quantity: 1
     });
 
-    await supplyInstance.addProduct(kbPartsArray, {from: kbDesigner});
-    const kbProductId = await supplyInstance.getPreviousProductId({from: kbDesigner});
+    await instance.addProduct(kbPartsArray, {from: kbDesigner});
+    const kbProductId = await instance.getPreviousProductId({from: kbDesigner});
     assert.equal(kbProductId, 0, "unexpected kbProductId");
 
     // ---------------- Bidding phase
@@ -568,14 +566,14 @@ contract('SupplyChain', (accounts) => {
       var shippingPriceArray = [];
       shippingPriceArray.push({ quantity: 1, priceWei: price });
 
-      await supplyInstance.addItem(
+      await instance.addItem(
         shippingQuantity,
         shippingHashedDesc,
         shippingPriceArray,
         { from: shippingCo }
       );
 
-      const shippingId = await supplyInstance.getPreviousItemId({ from: shippingCo });
+      const shippingId = await instance.getPreviousItemId({ from: shippingCo });
       return shippingId;
     }
 
@@ -598,8 +596,8 @@ contract('SupplyChain', (accounts) => {
       quantity: 1
     });
 
-    await supplyInstance.addProduct(shippedKbC1PartsArray, {from: customer1});
-    const shippedKbC1ProductId = await supplyInstance.getPreviousProductId({from: customer1});
+    await instance.addProduct(shippedKbC1PartsArray, {from: customer1});
+    const shippedKbC1ProductId = await instance.getPreviousProductId({from: customer1});
 
     // Customer 2 wants five KBs
     var shippedKbC2PartsArray = [];
@@ -620,8 +618,8 @@ contract('SupplyChain', (accounts) => {
       quantity: 1
     });
 
-    await supplyInstance.addProduct(shippedKbC2PartsArray, {from: customer2});
-    const shippedKbC2ProductId = await supplyInstance.getPreviousProductId({from: customer2});
+    await instance.addProduct(shippedKbC2PartsArray, {from: customer2});
+    const shippedKbC2ProductId = await instance.getPreviousProductId({from: customer2});
 
 
     // Customer 3 wants a single kb
@@ -643,8 +641,10 @@ contract('SupplyChain', (accounts) => {
       quantity: 1
     });
 
-    await supplyInstance.addProduct(shippedKbC3PartsArray, {from: customer3});
-    const shippedKbC3ProductId = await supplyInstance.getPreviousProductId({from: customer3});
+    await instance.addProduct(shippedKbC3PartsArray, {from: customer3});
+    const shippedKbC3ProductId = await instance.getPreviousProductId({from: customer3});
   });
 });
+/*
+
 */
