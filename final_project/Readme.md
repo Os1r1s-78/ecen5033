@@ -1,8 +1,6 @@
-## Final Project - Supply Chain. Below documentation needs updating.
+## Final Project - Supply Chain
 
-### Offline Testing
-
-Automated testing is available for both `rock paper scissors` and `vulnerable contract` on a local blockchain using the Truffle framework.
+[Writeup](https://github.com/aakashpk/ecen5033/blob/master/final_project/supplychain_paper.pdf)
 
 #### Testing Steps
 
@@ -11,6 +9,6 @@ Install Truffle:
 ```npm install -g truffle```
 
 To test:
-1. In one terminal, run `truffle develop --log`
-2. In another terminal, navigate to either `truffle/vuln` or `truffle/rps`
-3. run `truffle test`
+1. `cd truffle/supply_chain`
+2. Run `truffle develop --log` or launch Ganache 
+3. In another terminal, run `truffle test`
